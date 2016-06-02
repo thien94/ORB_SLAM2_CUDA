@@ -1,3 +1,14 @@
+*.swp
+/build/
+Examples/Monocular/mono_kitti
+Examples/Monocular/mono_tum
+Examples/RGB-D/rgbd_tum
+Examples/Stereo/stereo_kitti
+Thirdparty/DBoW2/build/
+Thirdparty/g2o/build/
+Thirdparty/g2o/config.h
+Vocabulary/ORBvoc.txt
+
 # Compiled Object files
 *.slo
 *.lo

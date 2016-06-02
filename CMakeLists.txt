@@ -39,7 +39,7 @@ ${EIGEN3_INCLUDE_DIR}
 ${Pangolin_INCLUDE_DIRS}
 )
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 
 add_library(${PROJECT_NAME} SHARED
 src/System.cc
@@ -94,4 +94,7 @@ target_link_libraries(mono_tum ${PROJECT_NAME})
 add_executable(mono_kitti
 Examples/Monocular/mono_kitti.cc)
 target_link_libraries(mono_kitti ${PROJECT_NAME})
+
+unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+add_subdirectory(gpu gpu)
 

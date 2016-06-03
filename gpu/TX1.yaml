@@ -15,11 +15,14 @@ Camera.k2: 0.0
 Camera.p1: 0.0
 Camera.p2: 0.0
 
+Camera.width:   960
+Camera.height:  540
+
 # Camera frames per second 
 Camera.fps: 10.0
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
-Camera.RGB: 1
+Camera.RGB: 0
 
 #--------------------------------------------------------------------------------------------
 # ORB Parameters
@@ -38,7 +41,7 @@ ORBextractor.nLevels: 8
 # Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
 # Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
 # You can lower these values if your images have low contrast			
-ORBextractor.iniThFAST: 20
+ORBextractor.iniThFAST: 12
 ORBextractor.minThFAST: 7
 
 #--------------------------------------------------------------------------------------------

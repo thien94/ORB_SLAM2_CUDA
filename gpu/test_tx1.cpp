@@ -27,6 +27,7 @@
 
 #include<opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include"System.h"
 
@@ -47,39 +48,53 @@ int main(int argc, char **argv)
 {
     if(argc != 3)
     {
-        cerr << endl << "Usage: ./mono_kitti path_to_vocabulary path_to_settings path_to_sequence" << endl;
+        cerr << endl << "Usage: " << argv[0] << " [path to vocabulary] [path to settings]" << endl;
         return 1;
     }
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    //ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
+    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
 
     cout << endl << "-------" << endl;
     cout << "Start processing sequence ..." << endl;
 
     //const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)I420, framerate=(fraction)120/1 ! nvvidconv flip-method=2 ! videoconvert ! appsink";
-    //const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720,format=(string)I420, framerate=(fraction)24/1 ! nvvidconv flip-method=2 ! video/x-raw, format=(string)BGRx ! videoconvert ! 'video/x-raw, format=(string)BGR' ! appsink";
-    //const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)320, height=(int)240, format=(string)I420, framerate=(fraction)120/1 ! nvvidconv flip-method=2 ! video/x-raw, format=(string)I420 ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
-    const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)I420, framerate=(fraction)30/1' ! nvtee ! nvvidconv flip-method=2 ! 'video/x-raw(memory:NVMM), format=(string)I420 ! appsink";
+    const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)960, height=(int)540, format=(string)I420, framerate=(fraction)10/1 ! nvvidconv flip-method=2 ! videoconvert ! appsink";
+    //const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)I420, framerate=(fraction)24/1 ! nvvidconv flip-method=2 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+    //const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)I420, framerate=(fraction)30/1 ! nvtee ! nvvidconv flip-method=2 ! video/x-raw(memory:NVMM), format=(string)I420 ! appsink";
     cv::VideoCapture capture(gst);
+    if (!capture.isOpened()) {
+      printf("can not open camera or video file\n%s", gst);
+      return -1;
+    }
 
     SET_CLOCK(t0);
     // Main loop
     cv::Mat im;
-    capture >> im;
-    imshow("im", im);
-    for (;;);
-    for (;;)
-    {
+
+    /*
+    cv::namedWindow("im", cv::WINDOW_AUTOSIZE);
+    while (true) {
+      capture >> im;
+      if (!im.empty()) {
+        cv::imshow("im", im);
+      }
+      if (cv::waitKey(25) != -1) {
+        break;
+      }
+    }
+    */
+
+    while (true) {
         capture >> im;
         SET_CLOCK(t1);
         double tframe = TIME_DIFF(t1, t0);
         // Pass the image to the SLAM system
-        //SLAM.TrackMonocular(im,tframe);
+        SLAM.TrackMonocular(im,tframe);
     }
 
     // Stop all threads
-    //SLAM.Shutdown();
+    SLAM.Shutdown();
 
     return 0;
 }

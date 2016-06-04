@@ -61,10 +61,12 @@ public:
       cv::OutputArray descriptors);
 
     int inline GetLevels(){
-        return nlevels;}
+        return nlevels;
+    }
 
     float inline GetScaleFactor(){
-        return scaleFactor;}
+        return scaleFactor;
+    }
 
     std::vector<float> inline GetScaleFactors(){
         return mvScaleFactor;

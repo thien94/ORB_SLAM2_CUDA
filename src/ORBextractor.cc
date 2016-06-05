@@ -537,8 +537,8 @@ void ExtractorNode::DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNo
 
 }
 
-vector<cv::KeyPoint> ORBextractor::DistributeOctTree(const vector<cv::KeyPoint>& vToDistributeKeys, const int &minX,
-                                       const int &maxX, const int &minY, const int &maxY, const int &N, const int &level)
+vector<cv::KeyPoint> ORBextractor::DistributeOctTree(const vector<cv::KeyPoint>& vToDistributeKeys, const int minX,
+                                       const int maxX, const int minY, const int maxY, const int N, const int level)
 {
     // Compute how many initial nodes   
     const int nIni = round(static_cast<float>(maxX-minX)/(maxY-minY));
@@ -769,6 +769,7 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoin
 
     const float W = 30;
     
+    gpu::GpuMat placeholder;
     gpu::FAST_GPU fast_normal(iniThFAST);
     gpu::FAST_GPU fast_fallback(minThFAST);
 
@@ -810,7 +811,6 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoin
                     maxX = maxBorderX;
 
                 vector<cv::KeyPoint> vKeysCell;
-                gpu::GpuMat placeholder;
                 gpu::GpuMat inputImg(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX));
                 fast_normal(inputImg, placeholder, vKeysCell);
 
@@ -819,10 +819,10 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoin
 
                 if(!vKeysCell.empty())
                 {
-                    for(vector<cv::KeyPoint>::iterator vit=vKeysCell.begin(); vit!=vKeysCell.end();vit++)
+                    for(vector<cv::KeyPoint>::iterator vit = vKeysCell.begin(); vit!=vKeysCell.end(); vit++)
                     {
-                        (*vit).pt.x+=j*wCell;
-                        (*vit).pt.y+=i*hCell;
+                        vit->pt.x+=j*wCell;
+                        vit->pt.y+=i*hCell;
                         vToDistributeKeys.push_back(*vit);
                     }
                 }
@@ -847,11 +847,14 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoin
             keypoints[i].octave=level;
             keypoints[i].size = scaledPatchSize;
         }
-    }
+    } // loop every level
 
     // compute orientations
-    for (int level = 0; level < nlevels; ++level)
-        computeOrientation(mvImagePyramid[level], allKeypoints[level], umax);
+    Mat pyramid;
+    for (int level = 0; level < nlevels; ++level){
+        mvImagePyramid[level].download(pyramid);
+        computeOrientation(pyramid, allKeypoints[level], umax);
+    }
 }
 
 static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors,
@@ -904,7 +907,8 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
             continue;
 
         // preprocess the resized image
-        Mat workingMat = mvImagePyramid[level].clone();
+        Mat workingMat;
+        mvImagePyramid[level].download(workingMat);
         GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
         // Compute the descriptors
@@ -933,20 +937,21 @@ void ORBextractor::ComputePyramid(cv::Mat image)
         float scale = mvInvScaleFactor[level];
         Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
         Size wholeSize(sz.width + EDGE_THRESHOLD*2, sz.height + EDGE_THRESHOLD*2);
-        Mat temp(wholeSize, image.type());
-        mvImagePyramid[level] = temp(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height));
+        gpu::GpuMat target(wholeSize, image.type());
+        mvImagePyramid[level] = target(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height));
 
         // Compute the resized image
-        if( level != 0 )
+        if(level != 0)
         {
-            resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR);
+            gpu::resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR);
 
-            copyMakeBorder(mvImagePyramid[level], temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
-                           BORDER_REFLECT_101+BORDER_ISOLATED);            
+            gpu::copyMakeBorder(mvImagePyramid[level], target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+                           BORDER_REFLECT_101);
         }
         else
         {
-            copyMakeBorder(image, temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+            gpu::GpuMat gpuImg(image);
+            gpu::copyMakeBorder(gpuImg, target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
                            BORDER_REFLECT_101);            
         }
     }

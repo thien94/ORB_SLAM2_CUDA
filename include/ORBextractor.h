@@ -24,6 +24,7 @@
 #include <vector>
 #include <list>
 #include <opencv/cv.h>
+#include <opencv2/gpu/gpu.hpp>
 
 
 namespace ORB_SLAM2
@@ -84,14 +85,14 @@ public:
         return mvInvLevelSigma2;
     }
 
-    std::vector<cv::Mat> mvImagePyramid;
+    std::vector<cv::gpu::GpuMat>  mvImagePyramid;
 
 protected:
 
     void ComputePyramid(cv::Mat image);
     void ComputeKeyPointsOctTree(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);    
-    std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int &minX,
-                                           const int &maxX, const int &minY, const int &maxY, const int &nFeatures, const int &level);
+    std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int minX,
+                                    const int maxX, const int minY, const int maxY, const int nFeatures, const int level);
 
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::Point> pattern;

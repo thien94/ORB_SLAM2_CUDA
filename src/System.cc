@@ -24,10 +24,14 @@
 #include "Converter.h"
 #include <thread>
 #include <pangolin/pangolin.h>
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/core.hpp>
 #include <iomanip>
 
 namespace ORB_SLAM2
 {
+
+Allocator System::allocator;
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
                const bool bUseViewer):mSensor(sensor),mbReset(false),mbActivateLocalizationMode(false),
@@ -57,6 +61,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
        exit(-1);
     }
 
+    // Setup GPU Memory Management
+    cv::cuda::GpuMat::setDefaultAllocator(&allocator); 
 
     //Load ORB Vocabulary
     cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;

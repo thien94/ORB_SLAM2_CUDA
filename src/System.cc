@@ -28,10 +28,17 @@
 #include <opencv2/core.hpp>
 #include <iomanip>
 
+ORB_SLAM2::Allocator gpu_mat_allocator;
+
+namespace {
+  void __attribute__((constructor)) init() {
+    // Setup GPU Memory Management
+    cv::cuda::GpuMat::setDefaultAllocator(&gpu_mat_allocator);
+  }
+}
+
 namespace ORB_SLAM2
 {
-
-Allocator System::allocator;
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
                const bool bUseViewer):mSensor(sensor),mbReset(false),mbActivateLocalizationMode(false),
@@ -60,9 +67,6 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
        cerr << "Failed to open settings file at: " << strSettingsFile << endl;
        exit(-1);
     }
-
-    // Setup GPU Memory Management
-    cv::cuda::GpuMat::setDefaultAllocator(&allocator); 
 
     //Load ORB Vocabulary
     cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;

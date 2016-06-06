@@ -157,8 +157,6 @@ private:
     std::mutex mMutexMode;
     bool mbActivateLocalizationMode;
     bool mbDeactivateLocalizationMode;
-
-    static Allocator allocator;
 };
 
 }// namespace ORB_SLAM

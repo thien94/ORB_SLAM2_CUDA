@@ -114,7 +114,7 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
                                  uchar* desc)
 {
     float angle = (float)kpt.angle*factorPI;
-    float a = (float)cos(angle), b = (float)sin(angle);
+    float a = (float)cosf(angle), b = (float)sinf(angle);
 
     const uchar* center = &img.at<uchar>(cvRound(kpt.pt.y), cvRound(kpt.pt.x));
     const int step = (int)img.step;
@@ -854,7 +854,9 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
     // compute orientations
     Mat pyramid;
     for (int level = 0; level < nlevels; ++level){
-        mvImagePyramid[level].download(pyramid);
+        // mvImagePyramid[level].download(pyramid);
+        const cv::cuda::GpuMat &gMat = mvImagePyramid[level];
+        pyramid = Mat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
         computeOrientation(pyramid, allKeypoints[level], umax);
     }
 }
@@ -909,8 +911,11 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
             continue;
 
         // preprocess the resized image
-        Mat workingMat;
-        mvImagePyramid[level].download(workingMat);
+        // Mat workingMat;
+        // mvImagePyramid[level].download(workingMat);
+        const cv::cuda::GpuMat &gMat = mvImagePyramid[level];
+        Mat workingMat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
+
         GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
         // Compute the descriptors

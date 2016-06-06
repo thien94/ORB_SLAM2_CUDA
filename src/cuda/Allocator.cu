@@ -1,7 +1,7 @@
-#include "Allocator.h"
 #include <cassert>
 
 #include <helper_cuda.h>
+#include "Allocator.h"
 
 #define cudaCheck(stat) assert(stat == cudaSuccess)
 

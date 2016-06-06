@@ -20,7 +20,7 @@ bool Allocator::allocate(cv::cuda::GpuMat* mat, int rows, int cols, size_t elemS
     else
     {
         // Single row or single column must be continuous
-        cudaCheck(cudaMalloc(&mat->data, elemSize * cols * rows));
+        cudaCheck(cudaMallocManaged(&mat->data, elemSize * cols * rows));
         mat->step = elemSize * cols;
     }
 

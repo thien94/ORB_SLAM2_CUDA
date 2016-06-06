@@ -24,8 +24,7 @@
 #include <vector>
 #include <list>
 #include <opencv/cv.h>
-#include <opencv2/gpu/gpu.hpp>
-
+#include <opencv2/core/cuda.hpp>
 
 namespace ORB_SLAM2
 {
@@ -85,7 +84,7 @@ public:
         return mvInvLevelSigma2;
     }
 
-    std::vector<cv::gpu::GpuMat>  mvImagePyramid;
+    std::vector<cv::cuda::GpuMat>  mvImagePyramid;
 
 protected:
 

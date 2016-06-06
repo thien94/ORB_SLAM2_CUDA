@@ -1,6 +1,8 @@
 #include "Allocator.h"
 #include <cassert>
 
+#include <helper_cuda.h>
+
 #define cudaCheck(stat) assert(stat == cudaSuccess)
 
 namespace ORB_SLAM2
@@ -15,12 +17,12 @@ bool Allocator::allocate(cv::cuda::GpuMat* mat, int rows, int cols, size_t elemS
     if (rows > 1 && cols > 1)
     {
         mat->step = getPitch(elemSize * cols);
-        cudaCheck(cudaMallocManaged(&mat->data, mat->step * row));
+        checkCudaErrors(cudaMallocManaged(&mat->data, mat->step * rows));
     }
     else
     {
         // Single row or single column must be continuous
-        cudaCheck(cudaMallocManaged(&mat->data, elemSize * cols * rows));
+        checkCudaErrors(cudaMallocManaged(&mat->data, elemSize * cols * rows));
         mat->step = elemSize * cols;
     }
 
@@ -31,7 +33,7 @@ bool Allocator::allocate(cv::cuda::GpuMat* mat, int rows, int cols, size_t elemS
 
 void Allocator::free(cv::cuda::GpuMat* mat)
 {
-    cudaFree(mat->datastart);
+    checkCudaErrors(cudaFree(mat->datastart));
     delete mat->refcount;
 }
 

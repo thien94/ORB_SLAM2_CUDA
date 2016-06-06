@@ -46,6 +46,10 @@ ${Pangolin_INCLUDE_DIRS}
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 
+cuda_include_directories(
+  ${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc
+)
+
 cuda_add_library(${PROJECT_NAME} SHARED
 src/System.cc
 src/Tracking.cc
@@ -102,5 +106,5 @@ ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
 # target_link_libraries(mono_kitti ${PROJECT_NAME})
 
 unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-add_subdirectory(gpu gpu)
+add_subdirectory(gpu)
 

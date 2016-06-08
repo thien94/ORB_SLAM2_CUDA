@@ -65,6 +65,7 @@
 #include <vector>
 
 #include "ORBextractor.h"
+#include "Allocator.h"
 
 
 using namespace cv;
@@ -942,7 +943,7 @@ void ORBextractor::ComputePyramid(Mat image) {
         float scale = mvInvScaleFactor[level];
         Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
         Size wholeSize(sz.width + EDGE_THRESHOLD*2, sz.height + EDGE_THRESHOLD*2);
-        cuda::GpuMat target(wholeSize, image.type());
+        cuda::GpuMat target(wholeSize, image.type(), gpu_mat_allocator);
         mvImagePyramidBorder.push_back(target);
         mvImagePyramid.push_back(target(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height)));
     }

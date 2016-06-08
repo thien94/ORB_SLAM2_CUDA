@@ -5,6 +5,7 @@
 
 namespace ORB_SLAM2
 {
+    extern cv::cuda::GpuMat::Allocator * gpu_mat_allocator;
 
 class Allocator : public cv::cuda::GpuMat::Allocator
 {

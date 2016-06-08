@@ -35,13 +35,15 @@ void Allocator::free(cv::cuda::GpuMat* mat)
     delete mat->refcount;
 }
 
+cv::cuda::GpuMat::Allocator * gpu_mat_allocator;
+
 }
 
 
 namespace {
   void __attribute__((constructor)) init() {
     // Setup GPU Memory Management
-    ORB_SLAM2::Allocator *gpu_mat_allocator = new ORB_SLAM2::Allocator();
-    cv::cuda::GpuMat::setDefaultAllocator(gpu_mat_allocator);
+    ORB_SLAM2::gpu_mat_allocator = new ORB_SLAM2::Allocator();
+    // cv::cuda::GpuMat::setDefaultAllocator(ORB_SLAM2::gpu_mat_allocator);
   }
 }

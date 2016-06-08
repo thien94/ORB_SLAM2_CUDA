@@ -434,7 +434,8 @@ ORBextractor::ORBextractor(int _nfeatures, float _scaleFactor, int _nlevels,
         mvInvLevelSigma2[i]=1.0f/mvLevelSigma2[i];
     }
 
-    mvImagePyramid.resize(nlevels);
+    // Postpone the allocation of the Pyramids to the time we process the first frame.
+    mvImagePyramidAllocatedFlag = false;
 
     mnFeaturesPerLevel.resize(nlevels);
     float factor = 1.0f / scaleFactor;
@@ -854,7 +855,6 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
     // compute orientations
     Mat pyramid;
     for (int level = 0; level < nlevels; ++level){
-        // mvImagePyramid[level].download(pyramid);
         const cv::cuda::GpuMat &gMat = mvImagePyramid[level];
         pyramid = Mat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
         computeOrientation(pyramid, allKeypoints[level], umax);
@@ -911,8 +911,6 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
             continue;
 
         // preprocess the resized image
-        // Mat workingMat;
-        // mvImagePyramid[level].download(workingMat);
         const cv::cuda::GpuMat &gMat = mvImagePyramid[level];
         Mat workingMat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
 
@@ -937,32 +935,36 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
     }
 }
 
-void ORBextractor::ComputePyramid(Mat image)
-{
-    for (int level = 0; level < nlevels; ++level)
-    {
+void ORBextractor::ComputePyramid(Mat image) {
+  if (mvImagePyramidAllocatedFlag == false) {
+    // first frame, allocate the Pyramids
+    for (int level = 0; level < nlevels; ++level) {
         float scale = mvInvScaleFactor[level];
         Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
         Size wholeSize(sz.width + EDGE_THRESHOLD*2, sz.height + EDGE_THRESHOLD*2);
         cuda::GpuMat target(wholeSize, image.type());
-        mvImagePyramid[level] = target(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height));
-
-        // Compute the resized image
-        if(level != 0)
-        {
-            cuda::resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR);
-
-            cuda::copyMakeBorder(mvImagePyramid[level], target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
-                           BORDER_REFLECT_101);
-        }
-        else
-        {
-            cuda::GpuMat gpuImg(image);
-            cuda::copyMakeBorder(gpuImg, target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
-                           BORDER_REFLECT_101);            
-        }
+        mvImagePyramidBorder.push_back(target);
+        mvImagePyramid.push_back(target(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height)));
     }
-
+    mvImagePyramidBorder.resize(nlevels);
+    mvImagePyramid.resize(nlevels);
+    mvImagePyramidAllocatedFlag = true;
+  }
+  for (int level = 0; level < nlevels; ++level) {
+    float scale = mvInvScaleFactor[level];
+    Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
+    cuda::GpuMat target(mvImagePyramidBorder[level]);
+    // Compute the resized image
+    if (level != 0) {
+      cuda::resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR);
+      cuda::copyMakeBorder(mvImagePyramid[level], target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+                            BORDER_REFLECT_101);
+    } else {
+      cuda::GpuMat gpuImg(image);
+      cuda::copyMakeBorder(gpuImg, target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+                            BORDER_REFLECT_101);
+    }
+  }
 }
 
 } //namespace ORB_SLAM

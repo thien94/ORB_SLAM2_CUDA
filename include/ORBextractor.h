@@ -84,7 +84,10 @@ public:
         return mvInvLevelSigma2;
     }
 
+    // I assume all frames are of the same dimension
+    bool mvImagePyramidAllocatedFlag;
     std::vector<cv::cuda::GpuMat>  mvImagePyramid;
+    std::vector<cv::cuda::GpuMat>  mvImagePyramidBorder;
 
 protected:
 

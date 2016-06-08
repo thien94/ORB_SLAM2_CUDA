@@ -1,9 +1,7 @@
 #include <cassert>
-
 #include <helper_cuda.h>
-#include "Allocator.h"
 
-#define cudaCheck(stat) assert(stat == cudaSuccess)
+#include "Allocator.h"
 
 namespace ORB_SLAM2
 {
@@ -37,4 +35,13 @@ void Allocator::free(cv::cuda::GpuMat* mat)
     delete mat->refcount;
 }
 
+}
+
+
+namespace {
+  void __attribute__((constructor)) init() {
+    // Setup GPU Memory Management
+    ORB_SLAM2::Allocator *gpu_mat_allocator = new ORB_SLAM2::Allocator();
+    cv::cuda::GpuMat::setDefaultAllocator(gpu_mat_allocator);
+  }
 }

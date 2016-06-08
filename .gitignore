@@ -8,6 +8,7 @@ Thirdparty/DBoW2/build/
 Thirdparty/g2o/build/
 Thirdparty/g2o/config.h
 Vocabulary/ORBvoc.txt
+KeyFrameTrajectory.txt
 
 # Compiled Object files
 *.slo

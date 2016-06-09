@@ -5,17 +5,18 @@ IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
 
-MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
+MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g")
 set(CMAKE_C_FLAGS_DEBUG "-O2 -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g")
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 LIST(APPEND CMAKE_C_FLAGS "-Wall -Wextra")
 LIST(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra")
 
+find_package(CUDA QUIET REQUIRED)
 set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 SET(CUDA_HOST_COMPILER /usr/bin/g++)
 LIST(APPEND CUDA_NVCC_FLAGS "--compiler-options -fno-strict-aliasing -use_fast_math")
@@ -43,7 +44,6 @@ LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 find_package(OpenCV 3.1.0 REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
-find_package(CUDA QUIET REQUIRED)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -90,26 +90,26 @@ ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
 )
 
 # Build examples
-
+if(NO_EXAMPLES)
+message(STATUS "Don't build examples")
+else ()
+message(STATUS "Build examples")
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D)
-
-# add_executable(rgbd_tum
-# Examples/RGB-D/rgbd_tum.cc)
+# add_executable(rgbd_tum `Examples/RGB-D/rgbd_tum.cc)
 # target_link_libraries(rgbd_tum ${PROJECT_NAME})
 
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Stereo)
-
-# add_executable(stereo_kitti
-# Examples/Stereo/stereo_kitti.cc)
+# add_executable(stereo_kitti Examples/Stereo/stereo_kitti.cc)
 # target_link_libraries(stereo_kitti ${PROJECT_NAME})
 
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
-
 add_executable(mono_tum Examples/Monocular/mono_tum.cc)
 target_link_libraries(mono_tum ${PROJECT_NAME})
 
 add_executable(mono_kitti Examples/Monocular/mono_kitti.cc)
 target_link_libraries(mono_kitti ${PROJECT_NAME})
+
+endif() # Build Examples
 
 unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 add_subdirectory(gpu)

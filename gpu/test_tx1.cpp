@@ -38,11 +38,11 @@ using namespace std;
         std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
 #else
 #define SET_CLOCK(t0) \
-        std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+        std::chrono::monotonic_clock::time_point t0 = std::chrono::monotonic_clock::now();
 #endif
 
 #define TIME_DIFF(t1, t0) \
-        std::chrono::duration_cast<std::chrono::duration<double>>(t1 - t0).count()
+        (std::chrono::duration_cast<std::chrono::duration<double>>((t1) - (t0)).count())
 
 int main(int argc, char **argv)
 {
@@ -89,6 +89,7 @@ int main(int argc, char **argv)
         capture >> im;
         SET_CLOCK(t1);
         double tframe = TIME_DIFF(t1, t0);
+        cerr << tframe << "\n";
         // Pass the image to the SLAM system
         SLAM.TrackMonocular(im,tframe);
     }

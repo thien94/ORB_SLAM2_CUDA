@@ -279,6 +279,11 @@ void System::Shutdown()
         usleep(5000);
     }
 
+    // Carefully handle threads
+    mptViewer->join();
+    mptLoopClosing->join();
+    mptLocalMapping->join();
+
     pangolin::BindToContext("ORB-SLAM2: Map Viewer");
 }
 

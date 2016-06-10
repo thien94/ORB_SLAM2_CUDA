@@ -280,6 +280,71 @@ namespace Fast
           return ismax;
         }
 
+        __global__ void tileCalcKeypoints2(const PtrStepSzb img, short2 * kpLoc, float * kpScore, const unsigned int maxKeypoints, const int highThreshold, const int lowThreshold, PtrStepi scoreMat, unsigned int * counter_ptr) {
+            const int j = threadIdx.x + blockIdx.x * blockDim.x + 3;
+            const int i = (threadIdx.y + blockIdx.y * blockDim.y) * 4 + 3;
+            const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+            __shared__ bool hasKp;
+            if (tid == 0) {
+              hasKp = false;
+            }
+
+            bool isKp[4] = {0};
+            for (int t = 0; t < 4; ++t) {
+              if (i+t < img.rows - 3 && j < img.cols - 3) {
+                if (isKeyPoint2(img, i+t, j, highThreshold, scoreMat)) {
+                  isKp[t] = true;
+                }
+              }
+            }
+            // barrieer
+            __syncthreads();
+            for (int t = 0; t < 4; ++t) {
+              if (isKp[t]) {
+                  isKp[t] = false;
+                  short2 loc = make_short2(j, i+t);
+                  if (isMax(loc, scoreMat)) {
+                    int score = scoreMat(loc.y, loc.x);
+                    hasKp = true;
+                    const unsigned int ind = atomicInc(counter_ptr, (unsigned int)(-1));
+                    if (ind < maxKeypoints) {
+                      kpLoc[ind] = loc;
+                      kpScore[ind] = static_cast<float>(score);
+                    }
+                  }
+              }
+            }
+            // barrieer
+            __syncthreads();
+            if (hasKp) return ;
+
+            // lower the threshold and try again
+            for (int t = 0; t < 4; ++t) {
+              if (i+t < img.rows - 3 && j < img.cols - 3) {
+                if (isKeyPoint2(img, i+t, j, highThreshold, scoreMat)) {
+                  isKp[t] = true;
+                }
+              }
+            }
+            // barrieer
+            __syncthreads();
+            for (int t = 0; t < 4; ++t) {
+              if (isKp[t]) {
+                  isKp[t] = false;
+                  short2 loc = make_short2(j, i+t);
+                  if (isMax(loc, scoreMat)) {
+                    int score = scoreMat(loc.y, loc.x);
+                    hasKp = true;
+                    const unsigned int ind = atomicInc(counter_ptr, (unsigned int)(-1));
+                    if (ind < maxKeypoints) {
+                      kpLoc[ind] = loc;
+                      kpScore[ind] = static_cast<float>(score);
+                    }
+                  }
+              }
+            }
+        }
+
         __global__ void tileCalcKeypoints(const PtrStepSzb img, short2 * kpLoc, float * kpScore, const unsigned int maxKeypoints, const int highThreshold, const int lowThreshold, PtrStepi scoreMat, unsigned int * counter_ptr) {
             const int j = threadIdx.x + blockIdx.x * blockDim.x + 3;
             const int i = threadIdx.y + blockIdx.y * blockDim.y + 3;
@@ -300,8 +365,8 @@ namespace Fast
             if (isKp) {
                 isKp = false;
                 short2 loc = make_short2(j, i);
-                int score = scoreMat(loc.y, loc.x);
                 if (isMax(loc, scoreMat)) {
+                  int score = scoreMat(loc.y, loc.x);
                   hasKp = true;
                   const unsigned int ind = atomicInc(counter_ptr, (unsigned int)(-1));
                   if (ind < maxKeypoints) {
@@ -325,8 +390,8 @@ namespace Fast
             __syncthreads();
             if (isKp) {
                 short2 loc = make_short2(j, i);
-                int score = scoreMat(loc.y, loc.x);
                 if (isMax(loc, scoreMat)) {
+                  int score = scoreMat(loc.y, loc.x);
                   hasKp = true;
                   const unsigned int ind = atomicInc(counter_ptr, (unsigned int)(-1));
                   if (ind < maxKeypoints) {
@@ -337,27 +402,32 @@ namespace Fast
             }
         }
 
-  void tileDetect_gpu(InputArray _image, int minBorderX, int maxBorderX, int minBorderY, int maxBorderY, std::vector<KeyPoint> &keypoints, int highThreshold, int lowThreshold) {
+  void tileDetect_gpu(InputArray _image, std::vector<KeyPoint> &keypoints, int highThreshold, int lowThreshold) {
     const unsigned int maxKeypoints = 10000;
 
     short2 * kpLoc;
-    checkCudaErrors( cudaMallocManaged(&kpLoc, sizeof(short2) * maxKeypoints) );
     float * kpScore;
-    checkCudaErrors( cudaMallocManaged(&kpScore, sizeof(float) * maxKeypoints) );
-
     unsigned int * counter_ptr;
+
+    checkCudaErrors( cudaMallocManaged(&kpLoc, sizeof(short2) * maxKeypoints) );
+    checkCudaErrors( cudaMallocManaged(&kpScore, sizeof(float) * maxKeypoints) );
     checkCudaErrors( cudaMalloc(&counter_ptr, sizeof(unsigned int)) );
+
     checkCudaErrors( cudaMemsetAsync(counter_ptr, 0, sizeof(unsigned int)) );
 
     const cv::cuda::GpuMat image = _image.getGpuMat();
-    cv::cuda::GpuMat scoreMat(image.size(), CV_32SC1, Scalar::all(0));
+    cv::cuda::GpuMat scoreMat(image.size(), CV_32SC1);
+    scoreMat.setTo(Scalar::all(0), Stream::Null());
 
-    const int width = maxBorderX - minBorderX;
-    const int height = maxBorderY - minBorderY;
-    dim3 dimBlock(32, 32);
-    dim3 dimGrid(divUp(width, 32), divUp(height, 32));
+    // block dimension cannot be too big, else cannot launch on TX1
+    // 16 x 16 is a good balance between block size and memory coalescing capability
+    // dim3 dimBlock(16, 16);
+    // dim3 dimGrid(divUp(image.cols, dimBlock.x), divUp(image.rows, dimBlock.y));
+    // tileCalcKeypoints<<<dimGrid, dimBlock>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
 
-    tileCalcKeypoints<<<dimGrid, dimBlock>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
+    dim3 dimBlock(32, 8);
+    dim3 dimGrid(divUp(image.cols, dimBlock.x), divUp(image.rows, dimBlock.y * 4));
+    tileCalcKeypoints2<<<dimGrid, dimBlock>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
 
     unsigned int count;
     checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
@@ -370,6 +440,7 @@ namespace Fast
       KeyPoint kp(kpLoc[i].x, kpLoc[i].y, static_cast<float>(FEATURE_SIZE), -1, kpScore[i]);
       keypoints[i] = kp;
     }
+
     checkCudaErrors( cudaFree(counter_ptr) );
     checkCudaErrors( cudaFree(kpLoc) );
     checkCudaErrors( cudaFree(kpScore) );

@@ -26,6 +26,6 @@ namespace Fast {
   void convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints);
   */
 
-  void tileDetect_gpu(InputArray _image, int minBorderX, int maxBorderX, int minBorderY, int maxBorderY, std::vector<KeyPoint> &keypoints, int highThreshold, int lowThreshold);
+  void tileDetect_gpu(InputArray _image, std::vector<KeyPoint> &keypoints, int highThreshold, int lowThreshold);
 }
 #endif

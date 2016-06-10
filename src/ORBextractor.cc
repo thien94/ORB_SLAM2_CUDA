@@ -781,7 +781,7 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
         vector<cv::KeyPoint> vToDistributeKeys;
         vToDistributeKeys.reserve(nfeatures*10);
 
-        Fast::tileDetect_gpu(mvImagePyramid[level].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX), minBorderX, maxBorderX, minBorderY, maxBorderY, vToDistributeKeys, iniThFAST, minThFAST);
+        Fast::tileDetect_gpu(mvImagePyramid[level].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX), vToDistributeKeys, iniThFAST, minThFAST);
 
         vector<KeyPoint> & keypoints = allKeypoints[level];
         keypoints.reserve(nfeatures);

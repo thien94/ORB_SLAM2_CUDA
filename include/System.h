@@ -35,7 +35,7 @@
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
 #include "Viewer.h"
-#include "Allocator.h"
+#include "cuda/Allocator.h"
 
 namespace ORB_SLAM2
 {

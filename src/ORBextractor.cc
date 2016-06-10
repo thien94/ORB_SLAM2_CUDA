@@ -65,8 +65,8 @@
 #include <vector>
 
 #include "ORBextractor.h"
-#include "Allocator.h"
-
+#include <cuda/Allocator.h>
+#include <cuda/Fast.hpp>
 
 using namespace cv;
 using namespace std;
@@ -771,12 +771,6 @@ vector<KeyPoint> ORBextractor::DistributeOctTree(const vector<KeyPoint>& vToDist
 void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoints)
 {
     allKeypoints.resize(nlevels);
-
-    const float W = 30;
-    
-    Ptr<cuda::FastFeatureDetector> fast_normal   = cuda::FastFeatureDetector::create(iniThFAST); 
-    Ptr<cuda::FastFeatureDetector> fast_fallback = cuda::FastFeatureDetector::create(minThFAST); 
-
     for (int level = 0; level < nlevels; ++level)
     {
         const int minBorderX = EDGE_THRESHOLD-3;
@@ -787,56 +781,7 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
         vector<cv::KeyPoint> vToDistributeKeys;
         vToDistributeKeys.reserve(nfeatures*10);
 
-        // const float width = (maxBorderX-minBorderX);
-        // const float height = (maxBorderY-minBorderY);
-
-        // const int nCols = width/W;
-        // const int nRows = height/W;
-        // const int wCell = ceil(width/nCols);
-        // const int hCell = ceil(height/nRows);
-        const int nCols = 1;
-        const int nRows = 1;
-        const int wCell = maxBorderX - minBorderX;
-        const int hCell = maxBorderY - minBorderY;
-
-        for(int i=0; i<nRows; i++)
-        {
-            const float iniY = minBorderY+i*hCell;
-            float maxY = iniY+hCell+6;
-
-            if(iniY>=maxBorderY-3)
-                continue;
-            if(maxY>maxBorderY)
-                maxY = maxBorderY;
-
-            for(int j=0; j<nCols; j++)
-            {
-                const float iniX = minBorderX+j*wCell;
-                float maxX = iniX+wCell+6;
-                if(iniX>=maxBorderX-6)
-                    continue;
-                if(maxX>maxBorderX)
-                    maxX = maxBorderX;
-
-                vector<cv::KeyPoint> vKeysCell;
-                cuda::GpuMat inputImg(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX));
-                fast_normal->detect(inputImg, vKeysCell );
-
-                if(vKeysCell.empty())
-                    fast_fallback->detect(inputImg, vKeysCell );
-
-                if(!vKeysCell.empty())
-                {
-                    for(vector<cv::KeyPoint>::iterator vit = vKeysCell.begin(); vit!=vKeysCell.end(); vit++)
-                    {
-                        vit->pt.x+=j*wCell;
-                        vit->pt.y+=i*hCell;
-                        vToDistributeKeys.push_back(*vit);
-                    }
-                }
-
-            }
-        }
+        Fast::tileDetect_gpu(mvImagePyramid[level].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX), minBorderX, maxBorderX, minBorderY, maxBorderY, vToDistributeKeys, iniThFAST, minThFAST);
 
         vector<KeyPoint> & keypoints = allKeypoints[level];
         keypoints.reserve(nfeatures);

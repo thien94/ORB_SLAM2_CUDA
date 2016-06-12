@@ -890,21 +890,16 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
         cv::cuda::GpuMat &gMat = mvImagePyramid[level];
         Mat workingMat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
 
-        /*
-        {
-        SET_CLOCK(t0);
         GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
-        SET_CLOCK(t1);
-        PRINT_CLOCK("GaussianBlur: ", t1, t0);
-        }
-        */
+        /*
         {
         SET_CLOCK(t0);
         Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(gMat.type(), gMat.type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
         filter->apply(gMat, gMat);
         SET_CLOCK(t1);
-        PRINT_CLOCK("Gpu::GaussianBlur: ", t1, t0);
+        //PRINT_CLOCK("Gpu::GaussianBlur: ", t1, t0);
         }
+        */
 
         // Compute the descriptors
         Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);

@@ -35,5 +35,17 @@ namespace Fast {
     void detectAsync(InputArray);
     void joinDetectAsync(std::vector<KeyPoint>&);
   };
+
+  class IC_Angle {
+    KeyPoint * keypoints;
+    cudaStream_t stream;
+  public:
+    IC_Angle();
+    ~IC_Angle();
+    void launch_async(InputArray _image, KeyPoint *keypoints, int npoints, int half_k);
+    void join();
+
+    static void loadUMax(const int* u_max, int count);
+  };
 }
 #endif

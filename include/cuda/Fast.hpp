@@ -5,27 +5,35 @@
 #include <vector>
 #include <opencv2/core/cuda.hpp>
 #include <cuda/Allocator.h>
+#include <cuda_runtime.h>
 
 namespace Fast {
   using namespace std;
   using namespace cv;
   using namespace cv::cuda;
 
-  enum {
-    LOCATION_ROW = 0,
-    RESPONSE_ROW,
-    ROWS_COUNT,
-    FEATURE_SIZE = 7
-  };
-
-  /*
-  int calcKeypoints_gpu(PtrStepSzb img, PtrStepSzb mask, short2* kpLoc, int maxKeypoints, PtrStepSzi score, int threshold, cudaStream_t stream);
-
-  void detect(InputArray _image, std::vector<KeyPoint> &keypoints, int threshold, int max_npoints_);
-  void detectAsync(InputArray _image, OutputArray _keypoints, int threshold, int max_npoints_, Stream& stream);
-  void convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints);
-  */
+  const float FEATURE_SIZE = 7.0;
 
   void tileDetect_gpu(InputArray _image, std::vector<KeyPoint> &keypoints, int highThreshold, int lowThreshold);
+
+  class GpuFast {
+    short2 * kpLoc;
+    float * kpScore;
+    unsigned int * counter_ptr;
+    const int highThreshold;
+    const int lowThreshold;
+    const unsigned int maxKeypoints;
+    cv::cuda::GpuMat scoreMat;
+    cudaStream_t stream;
+    Stream cvStream;
+  public:
+    GpuFast(int highThreshold, int lowThreshold, int maxKeypoints = 10000);
+    ~GpuFast();
+
+    void detect(InputArray, std::vector<KeyPoint>&);
+
+    void detectAsync(InputArray);
+    void joinDetectAsync(std::vector<KeyPoint>&);
+  };
 }
 #endif

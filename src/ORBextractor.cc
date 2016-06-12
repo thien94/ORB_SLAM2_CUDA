@@ -62,11 +62,13 @@
 #include <opencv2/cudafeatures2d.hpp>
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudafilters.hpp>
 #include <vector>
 
 #include "ORBextractor.h"
 #include <cuda/Allocator.h>
 #include <cuda/Fast.hpp>
+#include <Utils.hpp>
 
 using namespace cv;
 using namespace std;
@@ -771,6 +773,8 @@ vector<KeyPoint> ORBextractor::DistributeOctTree(const vector<KeyPoint>& vToDist
 void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoints)
 {
     allKeypoints.resize(nlevels);
+
+    Fast::GpuFast gpuFast(iniThFAST, minThFAST);
     for (int level = 0; level < nlevels; ++level)
     {
         const int minBorderX = EDGE_THRESHOLD-3;
@@ -781,7 +785,16 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
         vector<cv::KeyPoint> vToDistributeKeys;
         vToDistributeKeys.reserve(nfeatures*10);
 
-        Fast::tileDetect_gpu(mvImagePyramid[level].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX), vToDistributeKeys, iniThFAST, minThFAST);
+        // software pipelining
+        if (level == 0) {
+          gpuFast.detectAsync(mvImagePyramid[level].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX));
+        }
+        gpuFast.joinDetectAsync(vToDistributeKeys);
+        if (level + 1 < nlevels) {
+          const int maxBorderX = mvImagePyramid[level+1].cols-EDGE_THRESHOLD+3;
+          const int maxBorderY = mvImagePyramid[level+1].rows-EDGE_THRESHOLD+3;
+          gpuFast.detectAsync(mvImagePyramid[level+1].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX));
+        }
 
         vector<KeyPoint> & keypoints = allKeypoints[level];
         keypoints.reserve(nfeatures);
@@ -832,8 +845,11 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
     // Pre-compute the scale pyramid
     ComputePyramid(image);
 
+    SET_CLOCK(t0);
     vector<vector<KeyPoint>> allKeypoints;
     ComputeKeyPointsOctTree(allKeypoints);
+    SET_CLOCK(t1);
+    PRINT_CLOCK("ComputeKeyPointsOctTree: ", t1, t0);
 
     Mat descriptors;
 
@@ -861,10 +877,24 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
             continue;
 
         // preprocess the resized image
-        const cv::cuda::GpuMat &gMat = mvImagePyramid[level];
+        cv::cuda::GpuMat &gMat = mvImagePyramid[level];
         Mat workingMat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
 
+        /*
+        {
+        SET_CLOCK(t0);
         GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
+        SET_CLOCK(t1);
+        PRINT_CLOCK("GaussianBlur: ", t1, t0);
+        }
+        */
+        {
+        SET_CLOCK(t0);
+        Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(gMat.type(), gMat.type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
+        filter->apply(gMat, gMat);
+        SET_CLOCK(t1);
+        PRINT_CLOCK("Gpu::GaussianBlur: ", t1, t0);
+        }
 
         // Compute the descriptors
         Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);

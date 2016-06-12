@@ -42,6 +42,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/utility.hpp"
+#include <opencv2/core/cuda_stream_accessor.hpp>
 #include <helper_cuda.h>
 #include <cuda/Fast.hpp>
 
@@ -280,7 +281,7 @@ namespace Fast
     return ismax;
   }
 
-  __global__ void tileCalcKeypoints2(const PtrStepSzb img, short2 * kpLoc, float * kpScore, const unsigned int maxKeypoints, const int highThreshold, const int lowThreshold, PtrStepi scoreMat, unsigned int * counter_ptr) {
+  __global__ void tileCalcKeypoints(const PtrStepSzb img, short2 * kpLoc, float * kpScore, const unsigned int maxKeypoints, const int highThreshold, const int lowThreshold, PtrStepi scoreMat, unsigned int * counter_ptr) {
     const int j = threadIdx.x + blockIdx.x * blockDim.x + 3;
     const int i = (threadIdx.y + blockIdx.y * blockDim.y) * 4 + 3;
     const int tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -339,57 +340,6 @@ namespace Fast
     }
   }
 
-  __global__ void tileCalcKeypoints(const PtrStepSzb img, short2 * kpLoc, float * kpScore, const unsigned int maxKeypoints, const int highThreshold, const int lowThreshold, PtrStepi scoreMat, unsigned int * counter_ptr) {
-    const int j = threadIdx.x + blockIdx.x * blockDim.x + 3;
-    const int i = threadIdx.y + blockIdx.y * blockDim.y + 3;
-    const int tid = threadIdx.y * blockDim.x + threadIdx.x;
-    __shared__ bool hasKp;
-    if (tid == 0) {
-      hasKp = false;
-    }
-
-    bool isKp = false;
-    if (i < img.rows - 3 && j < img.cols - 3) {
-      isKp = isKeyPoint2(img, i, j, highThreshold, scoreMat);
-    }
-    // barrieer
-    __syncthreads();
-    if (isKp) {
-      isKp = false;
-      short2 loc = make_short2(j, i);
-      if (isMax(loc, scoreMat)) {
-        int score = scoreMat(loc.y, loc.x);
-        hasKp = true;
-        const unsigned int ind = atomicInc(counter_ptr, (unsigned int)(-1));
-        if (ind < maxKeypoints) {
-          kpLoc[ind] = loc;
-          kpScore[ind] = static_cast<float>(score);
-        }
-      }
-    }
-    // barrieer
-    __syncthreads();
-    if (hasKp) return ;
-
-    // lower the threshold and try again
-    if (i < img.rows - 3 && j < img.cols - 3) {
-      isKp = isKeyPoint2(img, i, j, lowThreshold, scoreMat);
-    }
-    // barrieer
-    __syncthreads();
-    if (isKp) {
-      short2 loc = make_short2(j, i);
-      if (isMax(loc, scoreMat)) {
-        int score = scoreMat(loc.y, loc.x);
-        const unsigned int ind = atomicInc(counter_ptr, (unsigned int)(-1));
-        if (ind < maxKeypoints) {
-          kpLoc[ind] = loc;
-          kpScore[ind] = static_cast<float>(score);
-        }
-      }
-    }
-  }
-
   void tileDetect_gpu(InputArray _image, std::vector<KeyPoint> &keypoints, int highThreshold, int lowThreshold) {
     const unsigned int maxKeypoints = 10000;
 
@@ -415,7 +365,7 @@ namespace Fast
 
     dim3 dimBlock(32, 8);
     dim3 dimGrid(divUp(image.cols, dimBlock.x), divUp(image.rows, dimBlock.y * 4));
-    tileCalcKeypoints2<<<dimGrid, dimBlock>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
+    tileCalcKeypoints<<<dimGrid, dimBlock>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
 
     unsigned int count;
     checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
@@ -425,7 +375,7 @@ namespace Fast
     count = std::min(count, maxKeypoints);
     keypoints.resize(count);
     for (int i = 0; i < count; ++i) {
-      KeyPoint kp(kpLoc[i].x, kpLoc[i].y, static_cast<float>(FEATURE_SIZE), -1, kpScore[i]);
+      KeyPoint kp(kpLoc[i].x, kpLoc[i].y, FEATURE_SIZE, -1, kpScore[i]);
       keypoints[i] = kp;
     }
 
@@ -433,5 +383,57 @@ namespace Fast
     checkCudaErrors( cudaFree(kpLoc) );
     checkCudaErrors( cudaFree(kpScore) );
     return ;
+  }
+
+  GpuFast::GpuFast(int highThreshold, int lowThreshold, int maxKeypoints)
+    : highThreshold(highThreshold), lowThreshold(lowThreshold), maxKeypoints(maxKeypoints)
+  {
+    checkCudaErrors( cudaStreamCreate(&stream) );
+    cvStream = StreamAccessor::wrapStream(stream);
+    checkCudaErrors( cudaMallocManaged(&kpLoc, sizeof(short2) * maxKeypoints) );
+    checkCudaErrors( cudaMallocManaged(&kpScore, sizeof(float) * maxKeypoints) );
+    checkCudaErrors( cudaMalloc(&counter_ptr, sizeof(unsigned int)) );
+  }
+
+  GpuFast::~GpuFast() {
+    cvStream.~Stream();
+    checkCudaErrors( cudaFree(counter_ptr) );
+    checkCudaErrors( cudaFree(kpScore) );
+    checkCudaErrors( cudaFree(kpLoc) );
+    checkCudaErrors( cudaStreamDestroy(stream) );
+  }
+
+  void GpuFast::detectAsync(InputArray _image) {
+    const cv::cuda::GpuMat image = _image.getGpuMat();
+    if (scoreMat.empty()) {
+      // If it is not empty, then it's already allocated by previous iteration
+      // and I ASSUME THE DIMENSIONS ARE CONSISTENT ACROSS EVERY ITERATION
+      // else THIS WILL BREAK
+      scoreMat = GpuMat(image.size(), CV_32SC1);
+    }
+    scoreMat.setTo(Scalar::all(0), cvStream);
+    checkCudaErrors( cudaMemsetAsync(counter_ptr, 0, sizeof(unsigned int), stream) );
+
+    dim3 dimBlock(32, 8);
+    dim3 dimGrid(divUp(image.cols, dimBlock.x), divUp(image.rows, dimBlock.y * 4));
+    tileCalcKeypoints<<<dimGrid, dimBlock, 0, stream>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
+  }
+
+  void GpuFast::joinDetectAsync(std::vector<KeyPoint>& keypoints) {
+    unsigned int count;
+    checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost, stream) );
+    checkCudaErrors( cudaStreamSynchronize(stream) );
+
+    count = std::min(count, maxKeypoints);
+    keypoints.resize(count);
+    for (int i = 0; i < count; ++i) {
+      KeyPoint kp(kpLoc[i].x, kpLoc[i].y, FEATURE_SIZE, -1, kpScore[i]);
+      keypoints[i] = kp;
+    }
+  }
+
+  void GpuFast::detect(InputArray _image, std::vector<KeyPoint>& keypoints) {
+    detectAsync(_image);
+    joinDetectAsync(keypoints);
   }
 } // namespace fast

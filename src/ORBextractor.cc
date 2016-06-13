@@ -68,6 +68,7 @@
 #include "ORBextractor.h"
 #include <cuda/Allocator.h>
 #include <cuda/Fast.hpp>
+#include <cuda/Orb.hpp>
 #include <Utils.hpp>
 
 using namespace cv;
@@ -895,7 +896,8 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
 
         // Compute the descriptors
         Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
-        computeDescriptors(workingMat, keypoints, desc, pattern);
+        //computeDescriptors(workingMat, keypoints, desc, pattern);
+        Orb::computeOrbDescriptors(gMat, keypoints.data(), keypoints.size(), desc, pattern.data());
 
         offset += nkeypointsLevel;
 

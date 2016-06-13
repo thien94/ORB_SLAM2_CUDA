@@ -79,7 +79,8 @@ src/Sim3Solver.cc
 src/Initializer.cc
 src/Viewer.cc
 src/cuda/Allocator.cu
-src/cuda/gpu_fast.cu
+src/cuda/Fast_gpu.cu
+src/cuda/Orb_gpu.cu
 )
 
 target_link_libraries(${PROJECT_NAME}

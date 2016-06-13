@@ -7,8 +7,8 @@ ENDIF()
 
 MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
-set(CMAKE_C_FLAGS_DEBUG "-O2 -g -DUSE_NVTX -lnvToolsExt")
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -DUSE_NVTX -lnvToolsExt")
+set(CMAKE_C_FLAGS_DEBUG "-O2 -g -DUSE_NVTX")
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -DUSE_NVTX")
 
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
@@ -88,6 +88,7 @@ ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+nvToolsExt
 )
 
 # Build examples

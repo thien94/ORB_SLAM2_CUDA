@@ -20,9 +20,10 @@ namespace Fast {
     short2 * kpLoc;
     float * kpScore;
     unsigned int * counter_ptr;
-    const int highThreshold;
-    const int lowThreshold;
-    const unsigned int maxKeypoints;
+    int highThreshold;
+    int lowThreshold;
+    unsigned int maxKeypoints;
+    unsigned int count;
     cv::cuda::GpuMat scoreMat;
     cudaStream_t stream;
     Stream cvStream;
@@ -47,5 +48,7 @@ namespace Fast {
 
     static void loadUMax(const int* u_max, int count);
   };
+
+  void deviceSynchronize();
 }
 #endif

@@ -44,15 +44,15 @@ int main(int argc, char **argv)
     }
 
     // Main loop
-    SET_CLOCK(t0);
     cv::Mat im;
+    SET_CLOCK(t0);
     int frameNumber = 0;
     while (true) {
       ++frameNumber;
       cap >> im;
       SET_CLOCK(t1);
       double tframe = TIME_DIFF(t1, t0);
-      //if (tframe > 60) break;
+      if (tframe > 30) break;
       // Pass the image to the SLAM system
       SLAM.TrackMonocular(im,tframe);
       SET_CLOCK(t2);

@@ -368,6 +368,7 @@ namespace Fast
     dim3 dimBlock(32, 8);
     dim3 dimGrid(divUp(image.cols, dimBlock.x), divUp(image.rows, dimBlock.y * 4));
     tileCalcKeypoints<<<dimGrid, dimBlock>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
+    checkCudaErrors( cudaGetLastError() );
 
     unsigned int count;
     checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost) );
@@ -419,13 +420,12 @@ namespace Fast
     dim3 dimBlock(32, 8);
     dim3 dimGrid(divUp(image.cols, dimBlock.x), divUp(image.rows, dimBlock.y * 4));
     tileCalcKeypoints<<<dimGrid, dimBlock, 0, stream>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
+    checkCudaErrors( cudaGetLastError() );
+    checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost, stream) );
   }
 
   void GpuFast::joinDetectAsync(std::vector<KeyPoint>& keypoints) {
-    unsigned int count;
-    checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost, stream) );
     checkCudaErrors( cudaStreamSynchronize(stream) );
-
     count = std::min(count, maxKeypoints);
     keypoints.resize(count);
     for (int i = 0; i < count; ++i) {
@@ -515,16 +515,25 @@ namespace Fast
 
   void IC_Angle::launch_async(InputArray _image, KeyPoint *_keypoints, int npoints, int half_k) {
     const cv::cuda::GpuMat image = _image.getGpuMat();
-    cudaMalloc(&keypoints, sizeof(KeyPoint) * npoints);
-    cudaMemcpyAsync(keypoints, _keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyHostToDevice, stream);
+    checkCudaErrors( cudaMalloc(&keypoints, sizeof(KeyPoint) * npoints) );
+    checkCudaErrors( cudaMemcpyAsync(keypoints, _keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyHostToDevice, stream) );
     dim3 block(32, 8);
     dim3 grid(divUp(npoints, block.y));
+    if (npoints == 0) {
+      return ;
+    }
     IC_Angle_kernel<<<grid, block, 0, stream>>>(image, keypoints, npoints, half_k);
-    cudaMemcpyAsync(_keypoints, keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyDeviceToHost, stream);
+    checkCudaErrors( cudaGetLastError() );
+    checkCudaErrors( cudaMemcpyAsync(_keypoints, keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyDeviceToHost, stream) );
   }
 
   void IC_Angle::join() {
     checkCudaErrors( cudaStreamSynchronize(stream) );
     checkCudaErrors( cudaFree(keypoints) );
   }
+
+  void deviceSynchronize() {
+    checkCudaErrors( cudaDeviceSynchronize() );
+  }
+
 } // namespace fast

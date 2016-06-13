@@ -774,10 +774,10 @@ vector<KeyPoint> ORBextractor::DistributeOctTree(const vector<KeyPoint>& vToDist
 
 void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoints)
 {
-    Fast::IC_Angle * ic_angle = new Fast::IC_Angle [nlevels] ();
     allKeypoints.resize(nlevels);
 
     Fast::GpuFast gpuFast(iniThFAST, minThFAST);
+    Fast::IC_Angle ic_angle;
     for (int level = 0; level < nlevels; ++level)
     {
         const int minBorderX = EDGE_THRESHOLD-3;
@@ -799,9 +799,9 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
           gpuFast.detectAsync(mvImagePyramid[level+1].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX));
         }
         // compute orientations
-        // PS. I think this is a bug ? Seems like the launch and join needs to be in the same for iteration or it breaks
+        // PS. I think this is a bug ? Seems like the launch and join needs to be in the same loop iteration else it breaks
         if (level != 0) {
-          ic_angle[level-1].launch_async(mvImagePyramid[level-1], allKeypoints[level-1].data(), allKeypoints[level-1].size(), HALF_PATCH_SIZE);
+          ic_angle.launch_async(mvImagePyramid[level-1], allKeypoints[level-1].data(), allKeypoints[level-1].size(), HALF_PATCH_SIZE);
         }
 
         vector<KeyPoint> & keypoints = allKeypoints[level];
@@ -824,14 +824,18 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
 
         // compute orientations
         if (level != 0) {
-          ic_angle[level-1].join();
+          ic_angle.join();
         }
     } // loop every level
 
     // compute orientations
-    ic_angle[nlevels - 1].launch_async(mvImagePyramid[nlevels - 1], allKeypoints[nlevels - 1].data(), allKeypoints[nlevels - 1].size(), HALF_PATCH_SIZE);
-    ic_angle[nlevels - 1].join();
-    delete [] ic_angle;
+    ic_angle.launch_async(mvImagePyramid[nlevels - 1], allKeypoints[nlevels - 1].data(), allKeypoints[nlevels - 1].size(), HALF_PATCH_SIZE);
+    ic_angle.join();
+    // for (int i = 0; i < nlevels; ++i) {
+    //   ic_angle.launch_async(mvImagePyramid[i], allKeypoints[i].data(), allKeypoints[i].size(), HALF_PATCH_SIZE);
+    //   ic_angle.join();
+    // }
+    // Fast::deviceSynchronize();
 }
 
 static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors,

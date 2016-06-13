@@ -48,14 +48,15 @@ int main(int argc, char **argv)
     SET_CLOCK(t0);
     int frameNumber = 0;
     while (true) {
-      ++frameNumber;
       cap >> im;
+      if (im.empty()) continue;
       SET_CLOCK(t1);
       double tframe = TIME_DIFF(t1, t0);
       if (tframe > 30) break;
       // Pass the image to the SLAM system
       SLAM.TrackMonocular(im,tframe);
       SET_CLOCK(t2);
+      ++frameNumber;
       cerr << frameNumber << ": " << tframe << " " << TIME_DIFF(t2, t1) << "\n";
     }
 

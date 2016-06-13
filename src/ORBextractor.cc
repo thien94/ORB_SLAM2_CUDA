@@ -778,10 +778,11 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
 
     Fast::GpuFast gpuFast(iniThFAST, minThFAST);
     Fast::IC_Angle ic_angle;
+    Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(mvImagePyramid[0].type(), mvImagePyramid[0].type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
+    const int minBorderX = EDGE_THRESHOLD-3;
+    const int minBorderY = minBorderX;
     for (int level = 0; level < nlevels; ++level)
     {
-        const int minBorderX = EDGE_THRESHOLD-3;
-        const int minBorderY = minBorderX;
         const int maxBorderX = mvImagePyramid[level].cols-EDGE_THRESHOLD+3;
         const int maxBorderY = mvImagePyramid[level].rows-EDGE_THRESHOLD+3;
 
@@ -798,10 +799,11 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
           const int maxBorderY = mvImagePyramid[level+1].rows-EDGE_THRESHOLD+3;
           gpuFast.detectAsync(mvImagePyramid[level+1].rowRange(minBorderY, maxBorderY).colRange(minBorderX, maxBorderX));
         }
-        // compute orientations
-        // PS. I think this is a bug ? Seems like the launch and join needs to be in the same loop iteration else it breaks
+        // compute orientations and Gaussian Blur
         if (level != 0) {
-          ic_angle.launch_async(mvImagePyramid[level-1], allKeypoints[level-1].data(), allKeypoints[level-1].size(), HALF_PATCH_SIZE);
+          ic_angle.launch_async(mvImagePyramid[level-1], allKeypoints[level-1].data(), allKeypoints[level-1].size(), HALF_PATCH_SIZE, minBorderX, minBorderY, level-1, PATCH_SIZE * mvScaleFactor[level-1]);
+          cv::cuda::GpuMat &gMat = mvImagePyramid[level-1];
+          filter->apply(gMat, gMat, ic_angle.cvStream());
         }
 
         vector<KeyPoint> & keypoints = allKeypoints[level];
@@ -813,29 +815,21 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
         const int scaledPatchSize = PATCH_SIZE*mvScaleFactor[level];
 
         // Add border to coordinates and scale information
-        const int nkps = keypoints.size();
-        for(int i = 0; i < nkps; i++)
-        {
-            keypoints[i].pt.x+=minBorderX;
-            keypoints[i].pt.y+=minBorderY;
-            keypoints[i].octave=level;
-            keypoints[i].size = scaledPatchSize;
-        }
+        // Mergedd into IC_Angle
 
         // compute orientations
+        // PS. I think this is a bug ? Seems like the launch and join needs to be in the same loop iteration else it breaks
         if (level != 0) {
           ic_angle.join();
         }
     } // loop every level
 
     // compute orientations
-    ic_angle.launch_async(mvImagePyramid[nlevels - 1], allKeypoints[nlevels - 1].data(), allKeypoints[nlevels - 1].size(), HALF_PATCH_SIZE);
+    cv::cuda::GpuMat &gMat = mvImagePyramid[nlevels-1];
+    ic_angle.launch_async(gMat, allKeypoints[nlevels-1].data(), allKeypoints[nlevels-1].size(), HALF_PATCH_SIZE, minBorderX, minBorderY, nlevels-1, PATCH_SIZE * mvScaleFactor[nlevels-1]);
+    filter->apply(gMat, gMat, ic_angle.cvStream());
     ic_angle.join();
-    // for (int i = 0; i < nlevels; ++i) {
-    //   ic_angle.launch_async(mvImagePyramid[i], allKeypoints[i].data(), allKeypoints[i].size(), HALF_PATCH_SIZE);
-    //   ic_angle.join();
-    // }
-    // Fast::deviceSynchronize();
+    Fast::deviceSynchronize();
 }
 
 static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors,
@@ -891,19 +885,12 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
             continue;
 
         // preprocess the resized image
+        //Fast::deviceSynchronize();
         cv::cuda::GpuMat &gMat = mvImagePyramid[level];
         Mat workingMat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
 
-        GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
-        /*
-        {
-        SET_CLOCK(t0);
-        Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(gMat.type(), gMat.type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
-        filter->apply(gMat, gMat);
-        SET_CLOCK(t1);
-        //PRINT_CLOCK("Gpu::GaussianBlur: ", t1, t0);
-        }
-        */
+        // Compute of Gaussion Blur is pipelined into `ComputeKeyPointsOctTree()`
+        // GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
         // Compute the descriptors
         Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);

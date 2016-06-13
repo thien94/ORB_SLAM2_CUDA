@@ -42,7 +42,6 @@
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/utility.hpp"
-#include <opencv2/core/cuda_stream_accessor.hpp>
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/functional.hpp"
 #include <helper_cuda.h>
@@ -505,31 +504,53 @@ namespace Fast
     }
   }
 
-  IC_Angle::IC_Angle() {
+  __global__ void addBorder_kernel(KeyPoint * keypoints, int npoints, int minBorderX, int minBorderY, int octave, int size) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= npoints) {
+      return;
+    }
+    keypoints[tid].pt.x += minBorderX;
+    keypoints[tid].pt.y += minBorderY;
+    keypoints[tid].octave = octave;
+    keypoints[tid].size = size;
+  }
+
+  IC_Angle::IC_Angle(unsigned int maxKeypoints) : maxKeypoints(maxKeypoints) {
     checkCudaErrors( cudaStreamCreate(&stream) );
+    _cvStream = StreamAccessor::wrapStream(stream);
+    checkCudaErrors( cudaMalloc(&keypoints, sizeof(KeyPoint) * maxKeypoints) );
   }
 
   IC_Angle::~IC_Angle() {
+    _cvStream.~Stream();
+    checkCudaErrors( cudaFree(keypoints) );
     checkCudaErrors( cudaStreamDestroy(stream) );
   }
 
-  void IC_Angle::launch_async(InputArray _image, KeyPoint *_keypoints, int npoints, int half_k) {
-    const cv::cuda::GpuMat image = _image.getGpuMat();
-    checkCudaErrors( cudaMalloc(&keypoints, sizeof(KeyPoint) * npoints) );
-    checkCudaErrors( cudaMemcpyAsync(keypoints, _keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyHostToDevice, stream) );
-    dim3 block(32, 8);
-    dim3 grid(divUp(npoints, block.y));
+  void IC_Angle::launch_async(InputArray _image, KeyPoint * _keypoints, int npoints, int half_k, int minBorderX, int minBorderY, int octave, int size) {
     if (npoints == 0) {
       return ;
     }
-    IC_Angle_kernel<<<grid, block, 0, stream>>>(image, keypoints, npoints, half_k);
-    checkCudaErrors( cudaGetLastError() );
+    const cv::cuda::GpuMat image = _image.getGpuMat();
+    checkCudaErrors( cudaMemcpyAsync(keypoints, _keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyHostToDevice, stream) );
+    // Add border to coordinates and scale information
+    {
+      dim3 block(256);
+      dim3 grid(divUp(npoints, block.x));
+      addBorder_kernel<<<grid, block, 0, stream>>>(keypoints, npoints, minBorderX, minBorderY, octave, size);
+      checkCudaErrors( cudaGetLastError() );
+    }
+    {
+      dim3 block(32, 8);
+      dim3 grid(divUp(npoints, block.y));
+      IC_Angle_kernel<<<grid, block, 0, stream>>>(image, keypoints, npoints, half_k);
+      checkCudaErrors( cudaGetLastError() );
+    }
     checkCudaErrors( cudaMemcpyAsync(_keypoints, keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyDeviceToHost, stream) );
   }
 
   void IC_Angle::join() {
     checkCudaErrors( cudaStreamSynchronize(stream) );
-    checkCudaErrors( cudaFree(keypoints) );
   }
 
   void deviceSynchronize() {

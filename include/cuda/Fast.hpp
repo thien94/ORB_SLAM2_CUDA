@@ -6,6 +6,7 @@
 #include <opencv2/core/cuda.hpp>
 #include <cuda/Allocator.h>
 #include <cuda_runtime.h>
+#include <opencv2/core/cuda_stream_accessor.hpp>
 
 namespace Fast {
   using namespace std;
@@ -20,8 +21,8 @@ namespace Fast {
     short2 * kpLoc;
     float * kpScore;
     unsigned int * counter_ptr;
-    int highThreshold;
-    int lowThreshold;
+    unsigned int highThreshold;
+    unsigned int lowThreshold;
     unsigned int maxKeypoints;
     unsigned int count;
     cv::cuda::GpuMat scoreMat;
@@ -38,14 +39,17 @@ namespace Fast {
   };
 
   class IC_Angle {
+    unsigned int maxKeypoints;
     KeyPoint * keypoints;
     cudaStream_t stream;
+    Stream _cvStream;
   public:
-    IC_Angle();
+    IC_Angle(unsigned int maxKeypoints = 10000);
     ~IC_Angle();
-    void launch_async(InputArray _image, KeyPoint *keypoints, int npoints, int half_k);
+    void launch_async(InputArray _image, KeyPoint * _keypoints, int npoints, int half_k, int minBorderX, int minBorderY, int octave, int size);
     void join();
 
+    Stream& cvStream() { return _cvStream;}
     static void loadUMax(const int* u_max, int count);
   };
 

@@ -60,6 +60,7 @@ int main(int argc, char **argv)
     cout << "Start processing sequence ..." << endl;
     cout << "Images in the sequence: " << nImages << endl << endl;
 
+    nImages = 200;
     // Main loop
     cv::Mat im;
     for(int ni=0; ni<nImages; ni++)

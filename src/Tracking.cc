@@ -35,6 +35,8 @@
 #include "Optimizer.h"
 #include "PnPsolver.h"
 
+#include <Utils.hpp>
+
 using namespace std;
 
 namespace ORB_SLAM2
@@ -264,6 +266,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
 
 void Tracking::Track()
 {
+    PUSH_RANGE("Tracking::Track()", 2);
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
@@ -501,6 +504,7 @@ void Tracking::Track()
         mlbLost.push_back(mState==LOST);
     }
 
+    POP_RANGE;
 }
 
 

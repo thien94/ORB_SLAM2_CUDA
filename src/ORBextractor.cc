@@ -812,8 +812,6 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
         keypoints = DistributeOctTree(vToDistributeKeys, minBorderX, maxBorderX,
                                       minBorderY, maxBorderY,mnFeaturesPerLevel[level], level);
 
-        const int scaledPatchSize = PATCH_SIZE*mvScaleFactor[level];
-
         // Add border to coordinates and scale information
         // Mergedd into IC_Angle
 
@@ -844,6 +842,7 @@ static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Ma
 void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
                       OutputArray _descriptors)
 { 
+    PUSH_RANGE("ORBextractor", 0);
     if(_image.empty())
         return;
 
@@ -892,9 +891,11 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
         // Compute of Gaussion Blur is pipelined into `ComputeKeyPointsOctTree()`
         // GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
+        PUSH_RANGE("computeDescriptors", 1);
         // Compute the descriptors
         Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
         computeDescriptors(workingMat, keypoints, desc, pattern);
+        POP_RANGE;
 
         offset += nkeypointsLevel;
 
@@ -909,6 +910,7 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
         // And add the keypoints to the output
         _keypoints.insert(_keypoints.end(), keypoints.begin(), keypoints.end());
     }
+    POP_RANGE;
 }
 
 void ORBextractor::ComputePyramid(Mat image) {

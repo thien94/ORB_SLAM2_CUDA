@@ -374,10 +374,10 @@ namespace Fast
     dim3 dimGrid(divUp(image.cols, dimBlock.x), divUp(image.rows, dimBlock.y * 4));
     tileCalcKeypoints_kernel<<<dimGrid, dimBlock, 0, stream>>>(image, kpLoc, kpScore, maxKeypoints, highThreshold, lowThreshold, scoreMat, counter_ptr);
     checkCudaErrors( cudaGetLastError() );
-    checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost, stream) );
   }
 
   void GpuFast::joinDetectAsync(std::vector<KeyPoint>& keypoints) {
+    checkCudaErrors( cudaMemcpyAsync(&count, counter_ptr, sizeof(unsigned int), cudaMemcpyDeviceToHost, stream) );
     checkCudaErrors( cudaStreamSynchronize(stream) );
     count = std::min(count, maxKeypoints);
     keypoints.resize(count);
@@ -500,10 +500,10 @@ namespace Fast
       IC_Angle_kernel<<<grid, block, 0, stream>>>(image, keypoints, npoints, half_k);
       checkCudaErrors( cudaGetLastError() );
     }
-    checkCudaErrors( cudaMemcpyAsync(_keypoints, keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyDeviceToHost, stream) );
   }
 
-  void IC_Angle::join() {
+  void IC_Angle::join(KeyPoint * _keypoints, int npoints) {
+    checkCudaErrors( cudaMemcpyAsync(_keypoints, keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyDeviceToHost, stream) );
     checkCudaErrors( cudaStreamSynchronize(stream) );
   }
 

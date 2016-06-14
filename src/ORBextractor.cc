@@ -796,17 +796,23 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
         cv::cuda::GpuMat &gMat = mvImagePyramid[level];
 
         // Compute of Gaussion Blur is pipelined into `ComputeKeyPointsOctTree()`
-        // Mat workingMat(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
-        // GaussianBlur(workingMat, workingMat, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
         // Compute the descriptors
-        Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
-        gpuOrb.launch_async(gMat, keypoints.data(), keypoints.size(), desc);
+        // Pipeline the CPU and GPU work
+        if (level == 0) {
+          Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
+          gpuOrb.launch_async(gMat, keypoints.data(), keypoints.size(), desc);
+        }
         gpuOrb.join();
-
         offset += nkeypointsLevel;
+        if (level + 1 < nlevels) {
+          vector<KeyPoint>& keypoints = allKeypoints[level+1];
+          Mat desc = descriptors.rowRange(offset, offset + keypoints.size());
+          gpuOrb.launch_async(mvImagePyramid[level+1], keypoints.data(), keypoints.size(), desc);
+        }
 
         // Scale keypoint coordinates
+        // TODO: This part shall be done by GPU
         if (level != 0)
         {
             float scale = mvScaleFactor[level]; //getScale(level, firstLevel, scaleFactor);

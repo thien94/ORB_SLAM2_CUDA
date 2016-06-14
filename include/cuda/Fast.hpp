@@ -15,8 +15,6 @@ namespace Fast {
 
   const float FEATURE_SIZE = 7.0;
 
-  void tileDetect_gpu(InputArray _image, std::vector<KeyPoint> &keypoints, int highThreshold, int lowThreshold);
-
   class GpuFast {
     short2 * kpLoc;
     float * kpScore;

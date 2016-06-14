@@ -60,7 +60,6 @@ int main(int argc, char **argv)
     cout << "Start processing sequence ..." << endl;
     cout << "Images in the sequence: " << nImages << endl << endl;
 
-    nImages = 200;
     // Main loop
     cv::Mat im;
     for(int ni=0; ni<nImages; ni++)
@@ -109,7 +108,7 @@ int main(int argc, char **argv)
     SLAM.Shutdown();
 
     // Tracking time statistics
-    sort(vTimesTrack.begin(),vTimesTrack.end());
+    sort(vTimesTrack.begin(),vTimesTrack.begin() + nImages);
     float totaltime = 0;
     for(int ni=0; ni<nImages; ni++)
     {

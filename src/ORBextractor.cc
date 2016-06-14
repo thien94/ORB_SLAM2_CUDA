@@ -763,11 +763,8 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
     // Pre-compute the scale pyramid
     ComputePyramid(image);
 
-    SET_CLOCK(t0);
     vector<vector<KeyPoint>> allKeypoints;
     ComputeKeyPointsOctTree(allKeypoints);
-    SET_CLOCK(t1);
-    PRINT_CLOCK("ComputeKeyPointsOctTree: ", t1, t0);
 
     Mat descriptors;
 

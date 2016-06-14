@@ -25,8 +25,8 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    if(argc != 3) {
-        cerr << endl << "Usage: " << argv[0] << " [path to vocabulary] [path to settings]" << endl;
+    if(argc != 4) {
+        cerr << endl << "Usage: " << argv[0] << " [path to vocabulary] [path to settings] [seconds to run]" << endl;
         return 1;
     }
 
@@ -43,6 +43,12 @@ int main(int argc, char **argv)
       return -1;
     }
 
+    double ttl = atof(argv[3]);
+
+    double tsum = 0;
+    double tbuf[10] = {0.0};
+    int tpos = 0;
+    double trackTimeSum = 0.0;
     // Main loop
     cv::Mat im;
     SET_CLOCK(t0);
@@ -52,16 +58,25 @@ int main(int argc, char **argv)
       if (im.empty()) continue;
       SET_CLOCK(t1);
       double tframe = TIME_DIFF(t1, t0);
-      if (tframe > 30) break;
+      if (tframe > ttl) {
+        break;
+      }
       // Pass the image to the SLAM system
       SLAM.TrackMonocular(im,tframe);
-      SET_CLOCK(t2);
-      ++frameNumber;
-      cerr << frameNumber << ": " << tframe << " " << TIME_DIFF(t2, t1) << "\n";
-    }
 
+      SET_CLOCK(t2);
+      double trackTime = TIME_DIFF(t2, t1);
+      trackTimeSum += trackTime;
+      tsum = tsum + trackTime - tbuf[tpos];
+      tbuf[tpos] = trackTime;
+      tpos = (tpos + 1) % 10;
+      cerr << "Frame " << frameNumber << " : " << tframe << " " << trackTime << " " << 10 / tsum << "\n";
+      ++frameNumber;
+    }
     // Stop all threads
     SLAM.Shutdown();
+
+    cerr << "Mean track time: " << trackTimeSum / frameNumber << "\n";
 
     return 0;
 }

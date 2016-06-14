@@ -71,7 +71,7 @@ namespace Orb {
     checkCudaErrors( cudaStreamDestroy(stream) );
   }
 
-  void GpuOrb::launch_async(InputArray _image, const KeyPoint * _keypoints, const int npoints, Mat & _descriptors) {
+  void GpuOrb::launch_async(InputArray _image, const KeyPoint * _keypoints, const int npoints) {
     PUSH_RANGE("computeDescriptors", 1);
     if (npoints == 0) {
       POP_RANGE;
@@ -80,19 +80,18 @@ namespace Orb {
     const GpuMat image = _image.getGpuMat();
 
     checkCudaErrors( cudaMemcpyAsync(keypoints, _keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyHostToDevice, stream) );
-    GpuMat desc = descriptors.rowRange(0, npoints);
+    desc = descriptors.rowRange(0, npoints);
     desc.setTo(Scalar::all(0), cvStream);
 
     dim3 dimBlock(32);
     dim3 dimGrid(npoints);
     calcOrb_kernel<<<dimGrid, dimBlock, 0, stream>>>(image, keypoints, npoints, desc);
     checkCudaErrors( cudaGetLastError() );
-
-    desc.download(_descriptors, cvStream);
     POP_RANGE;
   }
 
-  void GpuOrb::join() {
+  void GpuOrb::join(Mat & _descriptors) {
+    desc.download(_descriptors, cvStream);
     checkCudaErrors( cudaStreamSynchronize(stream) );
   }
 }

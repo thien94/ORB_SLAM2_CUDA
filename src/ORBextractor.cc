@@ -803,15 +803,14 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
         // Compute the descriptors
         // Pipeline the CPU and GPU work
         if (level == 0) {
-          Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
-          gpuOrb.launch_async(gMat, keypoints.data(), keypoints.size(), desc);
+          gpuOrb.launch_async(gMat, keypoints.data(), keypoints.size());
         }
-        gpuOrb.join();
+        Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
+        gpuOrb.join(desc);
         offset += nkeypointsLevel;
         if (level + 1 < nlevels) {
           vector<KeyPoint>& keypoints = allKeypoints[level+1];
-          Mat desc = descriptors.rowRange(offset, offset + keypoints.size());
-          gpuOrb.launch_async(mvImagePyramid[level+1], keypoints.data(), keypoints.size(), desc);
+          gpuOrb.launch_async(mvImagePyramid[level+1], keypoints.data(), keypoints.size());
         }
 
         // Scale keypoint coordinates

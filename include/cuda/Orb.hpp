@@ -13,6 +13,20 @@ namespace Orb {
   using namespace cv;
   using namespace cv::cuda;
 
-  void computeOrbDescriptors(InputArray _image, const KeyPoint * _keypoints, const int npoints, Mat &descriptors, const Point * pattern);
+  class GpuOrb {
+    unsigned int maxKeypoints;
+    KeyPoint * keypoints;
+    GpuMat descriptors;
+    cudaStream_t stream;
+    Stream cvStream;
+  public:
+    GpuOrb(int maxKeypoints = 10000);
+    ~GpuOrb();
+
+    void launch_async(InputArray _image, const KeyPoint * _keypoints, const int npoints, Mat &_descriptors);
+    void join();
+
+    static void loadPattern(const Point * _pattern);
+  };
 }
 #endif

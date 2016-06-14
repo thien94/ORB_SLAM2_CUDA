@@ -25,6 +25,8 @@
 #include <list>
 #include <opencv/cv.h>
 #include <opencv2/core/cuda.hpp>
+#include <cuda/Fast.hpp>
+#include <cuda/Orb.hpp>
 
 namespace ORB_SLAM2
 {
@@ -113,6 +115,10 @@ protected:
     std::vector<float> mvInvScaleFactor;    
     std::vector<float> mvLevelSigma2;
     std::vector<float> mvInvLevelSigma2;
+
+    Fast::GpuFast gpuFast;
+    Fast::IC_Angle ic_angle;
+    Orb::GpuOrb gpuOrb;
 };
 
 } //namespace ORB_SLAM

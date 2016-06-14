@@ -344,7 +344,8 @@ static int bit_pattern_31_[256*4] =
 ORBextractor::ORBextractor(int _nfeatures, float _scaleFactor, int _nlevels,
          int _iniThFAST, int _minThFAST):
     nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
-    iniThFAST(_iniThFAST), minThFAST(_minThFAST)
+    iniThFAST(_iniThFAST), minThFAST(_minThFAST),
+    gpuFast(iniThFAST, minThFAST), ic_angle(), gpuOrb()
 {
     mvScaleFactor.resize(nlevels);
     mvLevelSigma2.resize(nlevels);
@@ -404,6 +405,7 @@ ORBextractor::ORBextractor(int _nfeatures, float _scaleFactor, int _nlevels,
     }
 
     Fast::IC_Angle::loadUMax(umax.data(), umax.size());
+    Orb::GpuOrb::loadPattern(pattern.data());
 }
 
 void ExtractorNode::DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNode &n3, ExtractorNode &n4)
@@ -694,9 +696,7 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
 {
     allKeypoints.resize(nlevels);
 
-    Fast::GpuFast gpuFast(iniThFAST, minThFAST);
-    Fast::IC_Angle ic_angle;
-    Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(mvImagePyramid[0].type(), mvImagePyramid[0].type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
+    Ptr<cv::cuda::Filter> gaussianFilter = cv::cuda::createGaussianFilter(mvImagePyramid[0].type(), mvImagePyramid[0].type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
     const int minBorderX = EDGE_THRESHOLD-3;
     const int minBorderY = minBorderX;
     for (int level = 0; level < nlevels; ++level)
@@ -721,17 +721,16 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
         if (level != 0) {
           ic_angle.launch_async(mvImagePyramid[level-1], allKeypoints[level-1].data(), allKeypoints[level-1].size(), HALF_PATCH_SIZE, minBorderX, minBorderY, level-1, PATCH_SIZE * mvScaleFactor[level-1]);
           cv::cuda::GpuMat &gMat = mvImagePyramid[level-1];
-          filter->apply(gMat, gMat, ic_angle.cvStream());
+          gaussianFilter->apply(gMat, gMat, ic_angle.cvStream());
         }
 
         vector<KeyPoint> & keypoints = allKeypoints[level];
         keypoints.reserve(nfeatures);
 
-        keypoints = DistributeOctTree(vToDistributeKeys, minBorderX, maxBorderX,
-                                      minBorderY, maxBorderY,mnFeaturesPerLevel[level], level);
+        keypoints = DistributeOctTree(vToDistributeKeys, minBorderX, maxBorderX, minBorderY, maxBorderY,mnFeaturesPerLevel[level], level);
 
         // Add border to coordinates and scale information
-        // Mergedd into IC_Angle
+        // Merged into IC_Angle
 
         // compute orientations
         // PS. I think this is a bug ? Seems like the launch and join needs to be in the same loop iteration else it breaks
@@ -743,7 +742,7 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
     // compute orientations
     cv::cuda::GpuMat &gMat = mvImagePyramid[nlevels-1];
     ic_angle.launch_async(gMat, allKeypoints[nlevels-1].data(), allKeypoints[nlevels-1].size(), HALF_PATCH_SIZE, minBorderX, minBorderY, nlevels-1, PATCH_SIZE * mvScaleFactor[nlevels-1]);
-    filter->apply(gMat, gMat, ic_angle.cvStream());
+    gaussianFilter->apply(gMat, gMat, ic_angle.cvStream());
     ic_angle.join();
     Fast::deviceSynchronize();
 }
@@ -770,12 +769,13 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
     Mat descriptors;
 
     int nkeypoints = 0;
-    for (int level = 0; level < nlevels; ++level)
+    for (int level = 0; level < nlevels; ++level) {
         nkeypoints += (int)allKeypoints[level].size();
-    if( nkeypoints == 0 )
+    }
+
+    if( nkeypoints == 0 ) {
         _descriptors.release();
-    else
-    {
+    } else {
         _descriptors.create(nkeypoints, 32, CV_8U);
         descriptors = _descriptors.getMat();
     }
@@ -801,7 +801,8 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
 
         // Compute the descriptors
         Mat desc = descriptors.rowRange(offset, offset + nkeypointsLevel);
-        Orb::computeOrbDescriptors(gMat, keypoints.data(), keypoints.size(), desc, pattern.data());
+        gpuOrb.launch_async(gMat, keypoints.data(), keypoints.size(), desc);
+        gpuOrb.join();
 
         offset += nkeypointsLevel;
 

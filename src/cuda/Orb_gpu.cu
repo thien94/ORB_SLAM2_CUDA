@@ -12,18 +12,24 @@ using namespace cv::cuda::device;
 
 namespace Orb {
 
+  __constant__ unsigned char c_pattern[sizeof(Point) * 512];
+
+  void GpuOrb::loadPattern(const Point * _pattern) {
+    checkCudaErrors( cudaMemcpyToSymbol(c_pattern, _pattern, sizeof(Point) * 512) );
+  }
+
 #define GET_VALUE(idx) \
     image(loc.y + __float2int_rn(pattern[idx].x * b + pattern[idx].y * a), \
           loc.x + __float2int_rn(pattern[idx].x * a - pattern[idx].y * b))
 
-  __global__ void calcOrb_kernel(const PtrStepb image, KeyPoint * keypoints, const int npoints, const Point * pattern, PtrStepb descriptors) {
+  __global__ void calcOrb_kernel(const PtrStepb image, KeyPoint * keypoints, const int npoints, PtrStepb descriptors) {
     int id = blockIdx.x;
     int tid = threadIdx.x;
     if (id >= npoints) return;
 
     const KeyPoint &kpt = keypoints[id];
     short2 loc = make_short2(kpt.pt.x, kpt.pt.y);
-    pattern += 16 * tid;
+    const Point * pattern = ((Point *)c_pattern) + 16 * tid;
 
     uchar * desc = descriptors.ptr(id);
     const float factorPI = (float)(CV_PI/180.f);
@@ -51,34 +57,42 @@ namespace Orb {
     desc[tid] = (uchar)val;
   }
 
-  //void computeOrbDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Mat& descriptors, const vector<Point>& pattern)
-  void computeOrbDescriptors(InputArray _image, const KeyPoint * _keypoints, const int npoints, Mat & _descriptors, const Point * _pattern) {
+#undef GET_VALUE
+
+  GpuOrb::GpuOrb(int maxKeypoints) : maxKeypoints(maxKeypoints), descriptors(maxKeypoints, 32, CV_8UC1) {
+    checkCudaErrors( cudaStreamCreate(&stream) );
+    cvStream = StreamAccessor::wrapStream(stream);
+    checkCudaErrors( cudaMalloc(&keypoints, sizeof(KeyPoint) * maxKeypoints) );
+  }
+
+  GpuOrb::~GpuOrb() {
+    cvStream.~Stream();
+    checkCudaErrors( cudaFree(keypoints) );
+    checkCudaErrors( cudaStreamDestroy(stream) );
+  }
+
+  void GpuOrb::launch_async(InputArray _image, const KeyPoint * _keypoints, const int npoints, Mat & _descriptors) {
     PUSH_RANGE("computeDescriptors", 1);
     if (npoints == 0) {
       POP_RANGE;
       return ;
     }
-    cudaStream_t stream = 0;
     const GpuMat image = _image.getGpuMat();
-    KeyPoint * keypoints;
-    checkCudaErrors( cudaMalloc(&keypoints, sizeof(KeyPoint) * npoints) );
-    checkCudaErrors( cudaMemcpyAsync(keypoints, _keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyHostToDevice, stream) );
-    Point * pattern;
-    checkCudaErrors( cudaMalloc(&pattern, sizeof(Point) * 512) );
-    checkCudaErrors( cudaMemcpyAsync(pattern, _pattern, sizeof(Point) * 512, cudaMemcpyHostToDevice, stream) );
 
-    GpuMat descriptors(npoints, 32, CV_8UC1, Scalar::all(0));
+    checkCudaErrors( cudaMemcpyAsync(keypoints, _keypoints, sizeof(KeyPoint) * npoints, cudaMemcpyHostToDevice, stream) );
+    GpuMat desc = descriptors.rowRange(0, npoints);
+    desc.setTo(Scalar::all(0), cvStream);
 
     dim3 dimBlock(32);
     dim3 dimGrid(npoints);
-    calcOrb_kernel<<<dimGrid, dimBlock, 0, stream>>>(image, keypoints, npoints, pattern, descriptors);
+    calcOrb_kernel<<<dimGrid, dimBlock, 0, stream>>>(image, keypoints, npoints, desc);
     checkCudaErrors( cudaGetLastError() );
 
-    checkCudaErrors( cudaStreamSynchronize(stream) );
-
-    descriptors.download(_descriptors);
-    checkCudaErrors( cudaFree(keypoints) );
+    desc.download(_descriptors, cvStream);
     POP_RANGE;
   }
 
+  void GpuOrb::join() {
+    checkCudaErrors( cudaStreamSynchronize(stream) );
+  }
 }

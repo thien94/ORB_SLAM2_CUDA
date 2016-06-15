@@ -37,7 +37,8 @@ int main(int argc, char **argv)
     cout << endl << "-------" << endl;
     cout << "Start processing sequence ..." << endl;
 
-    const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)960, height=(int)540, format=(string)I420, framerate=(fraction)10/1 ! nvvidconv flip-method=2 ! videoconvert ! appsink";
+    // const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)I420, framerate=(fraction)24/1 ! nvvidconv flip-method=2 ! videoconvert ! appsink";
+    const char * gst = "nvcamerasrc ! video/x-raw(memory:NVMM), width=(int)960, height=(int)540, format=(string)I420, framerate=(fraction)30/1 ! nvvidconv flip-method=2 ! videoconvert ! appsink";
     cv::VideoCapture cap(gst);
     if (!cap.isOpened()) {
       printf("can not open camera or video file\n%s", gst);
@@ -71,8 +72,8 @@ int main(int argc, char **argv)
 
       double trackTime = TIME_DIFF(t2, t1);
       trackTimeSum += trackTime;
-      tsum = tsum + trackTime - tbuf[tpos];
-      tbuf[tpos] = trackTime;
+      tsum = tframe - tbuf[tpos];
+      tbuf[tpos] = tframe;
       tpos = (tpos + 1) % 10;
       cerr << "Frame " << frameNumber << " : " << tframe << " " << trackTime << " " << 10 / tsum << "\n";
       ++frameNumber;
@@ -80,7 +81,7 @@ int main(int argc, char **argv)
     // Stop all threads
     SLAM.Shutdown();
 
-    cerr << "Mean track time: " << trackTimeSum / frameNumber << "\n";
+    cerr << "Mean track time: " << trackTimeSum / frameNumber << " , mean fps: " << frameNumber / ttl << "\n";
 
     return 0;
 }

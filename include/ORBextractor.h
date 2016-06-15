@@ -24,7 +24,9 @@
 #include <vector>
 #include <list>
 #include <opencv/cv.h>
-
+#include <opencv2/core/cuda.hpp>
+#include <cuda/Fast.hpp>
+#include <cuda/Orb.hpp>
 
 namespace ORB_SLAM2
 {
@@ -61,10 +63,12 @@ public:
       cv::OutputArray descriptors);
 
     int inline GetLevels(){
-        return nlevels;}
+        return nlevels;
+    }
 
     float inline GetScaleFactor(){
-        return scaleFactor;}
+        return scaleFactor;
+    }
 
     std::vector<float> inline GetScaleFactors(){
         return mvScaleFactor;
@@ -82,14 +86,17 @@ public:
         return mvInvLevelSigma2;
     }
 
-    std::vector<cv::Mat> mvImagePyramid;
+    // I assume all frames are of the same dimension
+    bool mvImagePyramidAllocatedFlag;
+    std::vector<cv::cuda::GpuMat>  mvImagePyramid;
+    std::vector<cv::cuda::GpuMat>  mvImagePyramidBorder;
 
 protected:
 
     void ComputePyramid(cv::Mat image);
     void ComputeKeyPointsOctTree(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);    
-    std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int &minX,
-                                           const int &maxX, const int &minY, const int &maxY, const int &nFeatures, const int &level);
+    std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int minX,
+                                    const int maxX, const int minY, const int maxY, const int nFeatures, const int level);
 
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::Point> pattern;
@@ -108,6 +115,10 @@ protected:
     std::vector<float> mvInvScaleFactor;    
     std::vector<float> mvLevelSigma2;
     std::vector<float> mvInvLevelSigma2;
+
+    Fast::GpuFast gpuFast;
+    Fast::IC_Angle ic_angle;
+    Orb::GpuOrb gpuOrb;
 };
 
 } //namespace ORB_SLAM

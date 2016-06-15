@@ -5,10 +5,21 @@ IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
 
-MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
+MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall   -O3")
+set(CMAKE_C_FLAGS_DEBUG "-O2 -g -DUSE_NVTX")
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -DUSE_NVTX")
+
+set(CMAKE_C_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+LIST(APPEND CMAKE_C_FLAGS "-Wall -Wextra")
+LIST(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra")
+
+find_package(CUDA QUIET REQUIRED)
+set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+SET(CUDA_HOST_COMPILER /usr/bin/g++)
+LIST(APPEND CUDA_NVCC_FLAGS "--compiler-options -fno-strict-aliasing -use_fast_math")
 
 # Check C++11 or C++0x support
 include(CheckCXXCompilerFlag)
@@ -16,10 +27,12 @@ CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
 if(COMPILER_SUPPORTS_CXX11)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+   set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11")
    add_definitions(-DCOMPILEDWITHC11)
    message(STATUS "Using flag -std=c++11.")
 elseif(COMPILER_SUPPORTS_CXX0X)
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+   set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++0x")
    add_definitions(-DCOMPILEDWITHC0X)
    message(STATUS "Using flag -std=c++0x.")
 else()
@@ -41,7 +54,11 @@ ${Pangolin_INCLUDE_DIRS}
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
 
-add_library(${PROJECT_NAME} SHARED
+cuda_include_directories(
+  ${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc
+)
+
+cuda_add_library(${PROJECT_NAME} SHARED
 src/System.cc
 src/Tracking.cc
 src/LocalMapping.cc
@@ -61,6 +78,9 @@ src/KeyFrameDatabase.cc
 src/Sim3Solver.cc
 src/Initializer.cc
 src/Viewer.cc
+src/cuda/Allocator.cu
+src/cuda/Fast_gpu.cu
+src/cuda/Orb_gpu.cu
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -69,32 +89,30 @@ ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+nvToolsExt
 )
 
 # Build examples
-
+if(NO_EXAMPLES)
+message(STATUS "Don't build examples")
+else ()
+message(STATUS "Build examples")
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D)
-
-# add_executable(rgbd_tum
-# Examples/RGB-D/rgbd_tum.cc)
+# add_executable(rgbd_tum `Examples/RGB-D/rgbd_tum.cc)
 # target_link_libraries(rgbd_tum ${PROJECT_NAME})
 
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Stereo)
-
-# add_executable(stereo_kitti
-# Examples/Stereo/stereo_kitti.cc)
+# add_executable(stereo_kitti Examples/Stereo/stereo_kitti.cc)
 # target_link_libraries(stereo_kitti ${PROJECT_NAME})
 
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
+add_executable(mono_tum Examples/Monocular/mono_tum.cc)
+target_link_libraries(mono_tum ${PROJECT_NAME})
 
-# add_executable(mono_tum
-# Examples/Monocular/mono_tum.cc)
-# target_link_libraries(mono_tum ${PROJECT_NAME})
+add_executable(mono_kitti Examples/Monocular/mono_kitti.cc)
+target_link_libraries(mono_kitti ${PROJECT_NAME})
 
-# add_executable(mono_kitti
-# Examples/Monocular/mono_kitti.cc)
-# target_link_libraries(mono_kitti ${PROJECT_NAME})
+endif() # Build Examples
 
 unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-add_subdirectory(gpu gpu)
-
+add_subdirectory(gpu)

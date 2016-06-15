@@ -57,13 +57,15 @@ Frame::Frame(const Frame &frame)
         SetPose(frame.mTcw);
 }
 
-
-Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+// Constructor for stereo cameras.
+Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp,
+             ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc,
+             cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
      mpReferenceKF(static_cast<KeyFrame*>(NULL))
 {
     // Frame ID
-    mnId=nNextId++;
+    mnId = nNextId++;
 
     // Scale Level Info
     mnScaleLevels = mpORBextractorLeft->GetLevels();
@@ -115,8 +117,10 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 
     AssignFeaturesToGrid();
 }
-
-Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+// Constructor for RGB-D cameras.
+Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp,
+             ORBextractor* extractor, ORBVocabulary* voc,
+             cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
 {
@@ -170,8 +174,11 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     AssignFeaturesToGrid();
 }
 
-
-Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+// Constructor for Monocular cameras.
+Frame::Frame(const cv::Mat &imGray, const double &timeStamp,
+             ORBextractor* extractor,ORBVocabulary* voc,
+             cv::Mat &K, cv::Mat &distCoef,
+             const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
 {
@@ -558,7 +565,11 @@ void Frame::ComputeStereoMatches()
 
             // sliding window search
             const int w = 5;
-            cv::Mat IL = mpORBextractorLeft->mvImagePyramid[kpL.octave].rowRange(scaledvL-w,scaledvL+w+1).colRange(scaleduL-w,scaleduL+w+1);
+            cv::Mat IL;
+            mpORBextractorLeft->mvImagePyramid[kpL.octave]
+                .rowRange(scaledvL-w,scaledvL+w+1)
+                .colRange(scaleduL-w,scaleduL+w+1)
+                .download(IL);
             IL.convertTo(IL,CV_32F);
             IL = IL - IL.at<float>(w,w) *cv::Mat::ones(IL.rows,IL.cols,CV_32F);
 
@@ -575,7 +586,12 @@ void Frame::ComputeStereoMatches()
 
             for(int incR=-L; incR<=+L; incR++)
             {
-                cv::Mat IR = mpORBextractorRight->mvImagePyramid[kpL.octave].rowRange(scaledvL-w,scaledvL+w+1).colRange(scaleduR0+incR-w,scaleduR0+incR+w+1);
+                cv::Mat IR;
+                mpORBextractorRight->mvImagePyramid[kpL.octave]
+                    .rowRange(scaledvL-w,scaledvL+w+1)
+                    .colRange(scaleduR0+incR-w,scaleduR0+incR+w+1)
+                    .download(IR);
+
                 IR.convertTo(IR,CV_32F);
                 IR = IR - IR.at<float>(w,w) *cv::Mat::ones(IR.rows,IR.cols,CV_32F);
 

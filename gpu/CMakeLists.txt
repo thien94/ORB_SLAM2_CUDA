@@ -1,2 +1,2 @@
-add_executable(test_tx1 test_tx1.cpp)
-target_link_libraries(test_tx1 ${PROJECT_NAME})
+add_executable(tx1 tx1.cpp)
+target_link_libraries(tx1 ${PROJECT_NAME})

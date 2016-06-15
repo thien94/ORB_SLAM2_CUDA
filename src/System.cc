@@ -24,6 +24,8 @@
 #include "Converter.h"
 #include <thread>
 #include <pangolin/pangolin.h>
+#include <opencv2/core/cuda.hpp>
+#include <opencv2/core.hpp>
 #include <iomanip>
 
 namespace ORB_SLAM2
@@ -56,7 +58,6 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
        cerr << "Failed to open settings file at: " << strSettingsFile << endl;
        exit(-1);
     }
-
 
     //Load ORB Vocabulary
     cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
@@ -277,6 +278,11 @@ void System::Shutdown()
     {
         usleep(5000);
     }
+
+    // Carefully handle threads
+    mptViewer->join();
+    mptLoopClosing->join();
+    mptLocalMapping->join();
 
     pangolin::BindToContext("ORB-SLAM2: Map Viewer");
 }

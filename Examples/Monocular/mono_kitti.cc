@@ -28,6 +28,7 @@
 #include<opencv2/core/core.hpp>
 
 #include"System.h"
+#include <Utils.hpp>
 
 using namespace std;
 
@@ -80,8 +81,10 @@ int main(int argc, char **argv)
         std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
 #endif
 
+        PUSH_RANGE("Track image", 4);
         // Pass the image to the SLAM system
         SLAM.TrackMonocular(im,tframe);
+        POP_RANGE;
 
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -108,7 +111,7 @@ int main(int argc, char **argv)
     SLAM.Shutdown();
 
     // Tracking time statistics
-    sort(vTimesTrack.begin(),vTimesTrack.end());
+    sort(vTimesTrack.begin(),vTimesTrack.begin() + nImages);
     float totaltime = 0;
     for(int ni=0; ni<nImages; ni++)
     {

@@ -9,6 +9,7 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include <System.h>
+#include <Utils.hpp>
 
 using namespace std;
 
@@ -61,10 +62,13 @@ int main(int argc, char **argv)
       if (tframe > ttl) {
         break;
       }
+
+      PUSH_RANGE("Track image", 4);
       // Pass the image to the SLAM system
       SLAM.TrackMonocular(im,tframe);
-
+      POP_RANGE;
       SET_CLOCK(t2);
+
       double trackTime = TIME_DIFF(t2, t1);
       trackTimeSum += trackTime;
       tsum = tsum + trackTime - tbuf[tpos];

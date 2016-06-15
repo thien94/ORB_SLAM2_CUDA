@@ -72,7 +72,6 @@ namespace Orb {
   }
 
   void GpuOrb::launch_async(InputArray _image, const KeyPoint * _keypoints, const int npoints) {
-    PUSH_RANGE("computeDescriptors", 1);
     if (npoints == 0) {
       POP_RANGE;
       return ;
@@ -87,7 +86,6 @@ namespace Orb {
     dim3 dimGrid(npoints);
     calcOrb_kernel<<<dimGrid, dimBlock, 0, stream>>>(image, keypoints, npoints, desc);
     checkCudaErrors( cudaGetLastError() );
-    POP_RANGE;
   }
 
   void GpuOrb::join(Mat & _descriptors) {

@@ -697,7 +697,7 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
     allKeypoints.resize(nlevels);
 
     Fast::deviceSynchronize();
-    Ptr<cv::cuda::Filter> gaussianFilter = cv::cuda::createGaussianFilter(mvImagePyramid[0].type(), mvImagePyramid[0].type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
+    static Ptr<cv::cuda::Filter> gaussianFilter = cv::cuda::createGaussianFilter(mvImagePyramid[0].type(), mvImagePyramid[0].type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
     const int minBorderX = EDGE_THRESHOLD-3;
     const int minBorderY = minBorderX;
     for (int level = 0; level < nlevels; ++level)

@@ -7,14 +7,14 @@ ENDIF()
 
 MESSAGE(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
-set(CMAKE_C_FLAGS_DEBUG "-O2 -g -DUSE_NVTX")
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -DUSE_NVTX")
+set(CMAKE_C_FLAGS_DEBUG "-O2 -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g")
 
 set(CMAKE_C_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-LIST(APPEND CMAKE_C_FLAGS "-Wall -Wextra")
-LIST(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra")
+LIST(APPEND CMAKE_C_FLAGS "-Wall -Wextra -DUSE_NVTX")
+LIST(APPEND CMAKE_CXX_FLAGS "-Wall -Wextra -DUSE_NVTX")
 
 find_package(CUDA QUIET REQUIRED)
 set(CUDA_PROPAGATE_HOST_FLAGS OFF)
@@ -97,15 +97,13 @@ if(NO_EXAMPLES)
 message(STATUS "Don't build examples")
 else ()
 message(STATUS "Build examples")
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/RGB-D)
-# add_executable(rgbd_tum `Examples/RGB-D/rgbd_tum.cc)
-# target_link_libraries(rgbd_tum ${PROJECT_NAME})
 
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Stereo)
-# add_executable(stereo_kitti Examples/Stereo/stereo_kitti.cc)
-# target_link_libraries(stereo_kitti ${PROJECT_NAME})
+add_executable(rgbd_tum Examples/RGB-D/rgbd_tum.cc)
+target_link_libraries(rgbd_tum ${PROJECT_NAME})
 
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
+add_executable(stereo_kitti Examples/Stereo/stereo_kitti.cc)
+target_link_libraries(stereo_kitti ${PROJECT_NAME})
+
 add_executable(mono_tum Examples/Monocular/mono_tum.cc)
 target_link_libraries(mono_tum ${PROJECT_NAME})
 

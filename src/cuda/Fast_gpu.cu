@@ -348,6 +348,8 @@ namespace Fast
     cvStream = StreamAccessor::wrapStream(stream);
     checkCudaErrors( cudaMallocManaged(&kpLoc, sizeof(short2) * maxKeypoints) );
     checkCudaErrors( cudaMallocManaged(&kpScore, sizeof(float) * maxKeypoints) );
+    checkCudaErrors( cudaStreamAttachMemAsync(stream, kpLoc) );
+    checkCudaErrors( cudaStreamAttachMemAsync(stream, kpScore) );
     checkCudaErrors( cudaMalloc(&counter_ptr, sizeof(unsigned int)) );
   }
 

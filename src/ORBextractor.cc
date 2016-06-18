@@ -696,7 +696,6 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
 {
     allKeypoints.resize(nlevels);
 
-    Fast::deviceSynchronize();
     static Ptr<cv::cuda::Filter> gaussianFilter = cv::cuda::createGaussianFilter(mvImagePyramid[0].type(), mvImagePyramid[0].type(), Size(7, 7), 2, 2, BORDER_REFLECT_101);
     const int minBorderX = EDGE_THRESHOLD-3;
     const int minBorderY = minBorderX;
@@ -747,7 +746,6 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint>>& allKeypoint
     ic_angle.launch_async(gMat, allKeypoints[nlevels-1].data(), allKeypoints[nlevels-1].size(), HALF_PATCH_SIZE, minBorderX, minBorderY, nlevels-1, PATCH_SIZE * mvScaleFactor[nlevels-1]);
     gaussianFilter->apply(gMat, gMat, ic_angle.cvStream());
     ic_angle.join(allKeypoints[nlevels-1].data(), allKeypoints[nlevels-1].size());
-    Fast::deviceSynchronize();
 }
 
 void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
@@ -832,8 +830,8 @@ void ORBextractor::ComputePyramid(Mat image) {
         float scale = mvInvScaleFactor[level];
         Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
         Size wholeSize(sz.width + EDGE_THRESHOLD*2, sz.height + EDGE_THRESHOLD*2);
-        // cuda::GpuMat target(wholeSize, image.type(), gpu_mat_allocator);
-        cuda::GpuMat target(wholeSize, image.type());
+        cuda::GpuMat target(wholeSize, image.type(), gpu_mat_allocator);
+        // cuda::GpuMat target(wholeSize, image.type());
         mvImagePyramidBorder.push_back(target);
         mvImagePyramid.push_back(target(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height)));
     }
@@ -857,6 +855,7 @@ void ORBextractor::ComputePyramid(Mat image) {
                             BORDER_REFLECT_101, cv::Scalar(), cvStream);
     }
   }
+  cvStream.waitForCompletion();
 }
 
 } //namespace ORB_SLAM

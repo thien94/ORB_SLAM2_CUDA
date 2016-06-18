@@ -565,11 +565,8 @@ void Frame::ComputeStereoMatches()
 
             // sliding window search
             const int w = 5;
-            cv::Mat IL;
-            mpORBextractorLeft->mvImagePyramid[kpL.octave]
-                .rowRange(scaledvL-w,scaledvL+w+1)
-                .colRange(scaleduL-w,scaleduL+w+1)
-                .download(IL);
+            cv::cuda::GpuMat gMat = mpORBextractorLeft->mvImagePyramid[kpL.octave].rowRange(scaledvL - w, scaledvL + w + 1).colRange(scaleduL - w, scaleduL + w + 1);
+            cv::Mat IL(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
             IL.convertTo(IL,CV_32F);
             IL = IL - IL.at<float>(w,w) *cv::Mat::ones(IL.rows,IL.cols,CV_32F);
 
@@ -586,12 +583,8 @@ void Frame::ComputeStereoMatches()
 
             for(int incR=-L; incR<=+L; incR++)
             {
-                cv::Mat IR;
-                mpORBextractorRight->mvImagePyramid[kpL.octave]
-                    .rowRange(scaledvL-w,scaledvL+w+1)
-                    .colRange(scaleduR0+incR-w,scaleduR0+incR+w+1)
-                    .download(IR);
-
+                cv::cuda::GpuMat gMat = mpORBextractorRight->mvImagePyramid[kpL.octave].rowRange(scaledvL - w, scaledvL + w + 1).colRange(scaleduR0 + incR - w, scaleduR0 + incR + w + 1);
+                cv::Mat IR(gMat.rows, gMat.cols, gMat.type(), gMat.data, gMat.step);
                 IR.convertTo(IR,CV_32F);
                 IR = IR - IR.at<float>(w,w) *cv::Mat::ones(IR.rows,IR.cols,CV_32F);
 

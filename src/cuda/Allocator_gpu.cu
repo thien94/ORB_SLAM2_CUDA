@@ -1,10 +1,8 @@
 #include <cassert>
 #include <helper_cuda.h>
+#include <cuda/Allocator.hpp>
 
-#include <cuda/Allocator.h>
-
-namespace ORB_SLAM2
-{
+namespace ORB_SLAM2 { namespace cuda {
 
 size_t Allocator::getPitch(size_t widthSize){
     return 128 + widthSize - widthSize%128;
@@ -37,13 +35,15 @@ void Allocator::free(cv::cuda::GpuMat* mat)
 
 cv::cuda::GpuMat::Allocator * gpu_mat_allocator;
 
-}
+} }
 
 
 namespace {
+  using namespace ORB_SLAM2;
+
   void __attribute__((constructor)) init() {
     // Setup GPU Memory Management
-    ORB_SLAM2::gpu_mat_allocator = new ORB_SLAM2::Allocator();
-    // cv::cuda::GpuMat::setDefaultAllocator(ORB_SLAM2::gpu_mat_allocator);
+    cuda::gpu_mat_allocator = new cuda::Allocator();
+    // cv::cuda::GpuMat::setDefaultAllocator(cuda::gpu_mat_allocator);
   }
 }

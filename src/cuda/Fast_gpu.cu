@@ -51,8 +51,7 @@ using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cuda::device;
 
-namespace Fast
-{
+namespace ORB_SLAM2 { namespace cuda {
   ///////////////////////////////////////////////////////////////////////////
   // calcKeypoints
 
@@ -509,8 +508,4 @@ namespace Fast
     checkCudaErrors( cudaStreamSynchronize(stream) );
   }
 
-  void deviceSynchronize() {
-    checkCudaErrors( cudaDeviceSynchronize() );
-  }
-
-} // namespace fast
+} } // namespace fast

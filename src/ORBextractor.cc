@@ -53,7 +53,7 @@
 *
 */
 
-
+#include <vector>
 #include <opencv2/core.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -63,10 +63,8 @@
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudafilters.hpp>
-#include <vector>
-
-#include "ORBextractor.h"
-#include <cuda/Allocator.h>
+#include <ORBextractor.h>
+#include <cuda/Allocator.hpp>
 #include <cuda/Fast.hpp>
 #include <cuda/Orb.hpp>
 #include <Utils.hpp>
@@ -74,8 +72,7 @@
 using namespace cv;
 using namespace std;
 
-namespace ORB_SLAM2
-{
+namespace ORB_SLAM2 {
 
 const int PATCH_SIZE = 31;
 const int HALF_PATCH_SIZE = 15;
@@ -404,8 +401,8 @@ ORBextractor::ORBextractor(int _nfeatures, float _scaleFactor, int _nlevels,
         ++v0;
     }
 
-    Fast::IC_Angle::loadUMax(umax.data(), umax.size());
-    Orb::GpuOrb::loadPattern(pattern.data());
+    cuda::IC_Angle::loadUMax(umax.data(), umax.size());
+    cuda::GpuOrb::loadPattern(pattern.data());
 }
 
 void ExtractorNode::DivideNode(ExtractorNode &n1, ExtractorNode &n2, ExtractorNode &n3, ExtractorNode &n4)
@@ -830,7 +827,7 @@ void ORBextractor::ComputePyramid(Mat image) {
         float scale = mvInvScaleFactor[level];
         Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
         Size wholeSize(sz.width + EDGE_THRESHOLD*2, sz.height + EDGE_THRESHOLD*2);
-        cuda::GpuMat target(wholeSize, image.type(), gpu_mat_allocator);
+        cuda::GpuMat target(wholeSize, image.type(), cuda::gpu_mat_allocator);
         // cuda::GpuMat target(wholeSize, image.type());
         mvImagePyramidBorder.push_back(target);
         mvImagePyramid.push_back(target(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height)));

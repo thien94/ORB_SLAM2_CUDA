@@ -18,8 +18,9 @@
 * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ORBEXTRACTOR_H
-#define ORBEXTRACTOR_H
+#pragma once
+#ifndef __ORBEXTRACTOR_HPP__
+#define __ORBEXTRACTOR_HPP__
 
 #include <vector>
 #include <list>
@@ -28,8 +29,7 @@
 #include <cuda/Fast.hpp>
 #include <cuda/Orb.hpp>
 
-namespace ORB_SLAM2
-{
+namespace ORB_SLAM2 {
 
 class ExtractorNode
 {
@@ -47,11 +47,10 @@ public:
 class ORBextractor
 {
 public:
-    
+
     enum {HARRIS_SCORE=0, FAST_SCORE=1 };
 
-    ORBextractor(int nfeatures, float scaleFactor, int nlevels,
-                 int iniThFAST, int minThFAST);
+    ORBextractor(int nfeatures, float scaleFactor, int nlevels, int iniThFAST, int minThFAST);
 
     ~ORBextractor(){}
 
@@ -94,7 +93,7 @@ public:
 protected:
 
     void ComputePyramid(cv::Mat image);
-    void ComputeKeyPointsOctTree(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);    
+    void ComputeKeyPointsOctTree(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int minX,
                                     const int maxX, const int minY, const int maxY, const int nFeatures, const int level);
 
@@ -112,16 +111,15 @@ protected:
     std::vector<int> umax;
 
     std::vector<float> mvScaleFactor;
-    std::vector<float> mvInvScaleFactor;    
+    std::vector<float> mvInvScaleFactor;
     std::vector<float> mvLevelSigma2;
     std::vector<float> mvInvLevelSigma2;
 
-    Fast::GpuFast gpuFast;
-    Fast::IC_Angle ic_angle;
-    Orb::GpuOrb gpuOrb;
+    cuda::GpuFast gpuFast;
+    cuda::IC_Angle ic_angle;
+    cuda::GpuOrb gpuOrb;
 };
 
-} //namespace ORB_SLAM
+}  /* namespace ORB_SLAM2 */
 
 #endif
-

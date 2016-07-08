@@ -52,7 +52,7 @@ using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cuda::device;
 
-namespace Orb {
+namespace ORB_SLAM2 { namespace cuda {
 
   __constant__ unsigned char c_pattern[sizeof(Point) * 512];
 
@@ -134,4 +134,4 @@ namespace Orb {
     desc.download(_descriptors, cvStream);
     checkCudaErrors( cudaStreamSynchronize(stream) );
   }
-}
+} }

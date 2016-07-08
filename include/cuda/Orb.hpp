@@ -4,11 +4,11 @@
 
 #include <vector>
 #include <opencv2/core/cuda.hpp>
-#include <cuda/Allocator.h>
-#include <cuda_runtime.h>
 #include <opencv2/core/cuda_stream_accessor.hpp>
+#include <cuda_runtime.h>
+#include <cuda/Cuda.hpp>
 
-namespace Orb {
+namespace ORB_SLAM2 { namespace cuda {
   using namespace std;
   using namespace cv;
   using namespace cv::cuda;
@@ -29,5 +29,5 @@ namespace Orb {
 
     static void loadPattern(const Point * _pattern);
   };
-}
+} }
 #endif

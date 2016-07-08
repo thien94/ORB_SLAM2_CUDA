@@ -4,11 +4,11 @@
 
 #include <vector>
 #include <opencv2/core/cuda.hpp>
-#include <cuda/Allocator.h>
-#include <cuda_runtime.h>
 #include <opencv2/core/cuda_stream_accessor.hpp>
+#include <cuda_runtime.h>
+#include <cuda/Cuda.hpp>
 
-namespace Fast {
+namespace ORB_SLAM2 { namespace cuda {
   using namespace std;
   using namespace cv;
   using namespace cv::cuda;
@@ -50,7 +50,5 @@ namespace Fast {
     Stream& cvStream() { return _cvStream;}
     static void loadUMax(const int* u_max, int count);
   };
-
-  void deviceSynchronize();
-}
+} }
 #endif

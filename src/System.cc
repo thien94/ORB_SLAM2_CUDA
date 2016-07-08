@@ -24,16 +24,15 @@
 #include "Converter.h"
 #include <thread>
 #include <pangolin/pangolin.h>
-#include <opencv2/core/cuda.hpp>
-#include <opencv2/core.hpp>
 #include <iomanip>
 
 namespace ORB_SLAM2
 {
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
-               const bool bUseViewer):mSensor(sensor),mbReset(false),mbActivateLocalizationMode(false),
-        mbDeactivateLocalizationMode(false)
+               const bool bUseViewer)
+  : mSensor(sensor), mbReset(false), mbActivateLocalizationMode(false)
+  , mbDeactivateLocalizationMode(false)
 {
     // Output welcome message
     cout << endl <<

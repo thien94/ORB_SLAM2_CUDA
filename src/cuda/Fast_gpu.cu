@@ -51,8 +51,7 @@ using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cuda::device;
 
-namespace Fast
-{
+namespace ORB_SLAM2 { namespace cuda {
   ///////////////////////////////////////////////////////////////////////////
   // calcKeypoints
 
@@ -348,6 +347,8 @@ namespace Fast
     cvStream = StreamAccessor::wrapStream(stream);
     checkCudaErrors( cudaMallocManaged(&kpLoc, sizeof(short2) * maxKeypoints) );
     checkCudaErrors( cudaMallocManaged(&kpScore, sizeof(float) * maxKeypoints) );
+    checkCudaErrors( cudaStreamAttachMemAsync(stream, kpLoc) );
+    checkCudaErrors( cudaStreamAttachMemAsync(stream, kpScore) );
     checkCudaErrors( cudaMalloc(&counter_ptr, sizeof(unsigned int)) );
   }
 
@@ -507,8 +508,4 @@ namespace Fast
     checkCudaErrors( cudaStreamSynchronize(stream) );
   }
 
-  void deviceSynchronize() {
-    checkCudaErrors( cudaDeviceSynchronize() );
-  }
-
-} // namespace fast
+} } // namespace fast

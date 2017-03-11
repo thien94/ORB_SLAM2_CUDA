@@ -1,9 +1,10 @@
 # ORB-SLAM2-GPU
-This is a fork of Raul Mur-Artal's [ORB-SLAM2](https://github.com/raulmur/ORB_SLAM2), on which we rewrite hot path with Cuda.  Our optimization enables us to run the algorithm, in **real time** on Nvidia's Jetson TX1.
+This is a fork of Raul Mur-Artal's [ORB-SLAM2](https://github.com/raulmur/ORB_SLAM2), on which we rewrite hot paths with CUDA. Our optimization enables us to run the algorithm in **real time** on a Nvidia's Jetson TX1.
 
-### [Optimization details](http://yunchih.github.io/ORB-SLAM2-GPU2016-final/)
-### [Youtube demo](https://www.youtube.com/watch?v=p77hLLRfBGQ)
+- [Project presentation website](http://yunchih.github.io/ORB-SLAM2-GPU2016-final/)
+- [Demo video on youtube](https://www.youtube.com/watch?v=p77hLLRfBGQ)
 
+**Following is from the original README of ORB-SLAM2**
 
 ## Introduction
 

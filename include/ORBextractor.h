@@ -26,6 +26,7 @@
 #include <list>
 #include <opencv/cv.h>
 #include <opencv2/core/cuda.hpp>
+#include <opencv2/cudafilters.hpp>
 #include <cuda/Fast.hpp>
 #include <cuda/Orb.hpp>
 
@@ -90,6 +91,7 @@ public:
     std::vector<cv::cuda::GpuMat>  mvImagePyramid;
     std::vector<cv::cuda::GpuMat>  mvImagePyramidBorder;
 
+
 protected:
 
     void ComputePyramid(cv::Mat image);
@@ -99,6 +101,8 @@ protected:
 
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::Point> pattern;
+    cv::Ptr<cv::cuda::Filter> mpGaussianFilter;
+    cuda::Stream mcsStream;
 
     int nfeatures;
     double scaleFactor;

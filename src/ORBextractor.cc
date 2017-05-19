@@ -842,16 +842,16 @@ void ORBextractor::ComputePyramid(Mat image) {
     cuda::GpuMat target(mvImagePyramidBorder[level]);
     // Compute the resized image
     if (level != 0) {
-      cuda::resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR, mcsStream);
+      cuda::resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR, mcvStream);
       cuda::copyMakeBorder(mvImagePyramid[level], target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
-                            BORDER_REFLECT_101, cv::Scalar(), mcsStream);
+                            BORDER_REFLECT_101, cv::Scalar(), mcvStream);
     } else {
       cuda::GpuMat gpuImg(image);
       cuda::copyMakeBorder(gpuImg, target, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
-                            BORDER_REFLECT_101, cv::Scalar(), mcsStream);
+                            BORDER_REFLECT_101, cv::Scalar(), mcvStream);
     }
   }
-  mcsStream.waitForCompletion();
+  mcvStream.waitForCompletion();
 }
 
 } //namespace ORB_SLAM

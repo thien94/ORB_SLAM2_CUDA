@@ -102,7 +102,7 @@ protected:
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::Point> pattern;
     cv::Ptr<cv::cuda::Filter> mpGaussianFilter;
-    cuda::Stream mcsStream;
+    cuda::Stream mcvStream;
 
     int nfeatures;
     double scaleFactor;

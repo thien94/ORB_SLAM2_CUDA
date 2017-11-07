@@ -41,9 +41,11 @@ endif()
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
-find_package(OpenCV 3.1.0 REQUIRED)
+find_package(OpenCV 3.2.0 REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
+
+set(EIGEN3_INCLUDE_DIR /usr/local/include/eigen3)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -52,7 +54,7 @@ ${EIGEN3_INCLUDE_DIR}
 ${Pangolin_INCLUDE_DIRS}
 )
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
 cuda_include_directories(
   ${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc

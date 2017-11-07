@@ -18,7 +18,7 @@
 * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
+#include <unistd.h>
 
 #include "System.h"
 #include "Converter.h"
@@ -28,6 +28,7 @@
 
 namespace ORB_SLAM2
 {
+bool bEnableViewer;
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
                const bool bUseViewer)
@@ -81,6 +82,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpFrameDrawer = new FrameDrawer(mpMap);
     mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
 
+
     //Initialize the Tracking thread
     //(it will live in the main thread of execution, the one that called this constructor)
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
@@ -95,11 +97,13 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
 
     //Initialize the Viewer thread and launch
-    mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
+    bEnableViewer = bUseViewer;
     if(bUseViewer)
+    {    
+        mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
         mptViewer = new thread(&Viewer::Run, mpViewer);
-
-    mpTracker->SetViewer(mpViewer);
+        mpTracker->SetViewer(mpViewer);
+    }
 
     //Set pointers between threads
     mpTracker->SetLocalMapper(mpLocalMapper);
@@ -269,17 +273,31 @@ void System::Shutdown()
 {
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
-    mpViewer->RequestFinish();
 
-    // Wait until all thread have effectively stopped
-    while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished()  ||
-          !mpViewer->isFinished()      || mpLoopCloser->isRunningGBA())
+    if (bEnableViewer)
     {
-        usleep(5000);
+        mpViewer->RequestFinish();
+        // Wait until all thread have effectively stopped
+        while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished()  ||
+            !mpViewer->isFinished()      || mpLoopCloser->isRunningGBA())
+        {
+            usleep(5000);
+        }
+    }
+    else
+    {
+        // Wait until all thread have effectively stopped
+        while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished()  || mpLoopCloser->isRunningGBA())
+        {
+            usleep(5000);
+        }
     }
 
     // Carefully handle threads
-    mptViewer->join();
+    if (bEnableViewer)
+    {    
+        mptViewer->join();
+    }
     mptLoopClosing->join();
     mptLocalMapping->join();
 

@@ -26,6 +26,9 @@
 #include <thread>
 #include <opencv2/core/core.hpp>
 
+/* Add this line to fix problem "Eigen deprecated"*/
+#include <unistd.h>
+
 #include "Tracking.h"
 #include "FrameDrawer.h"
 #include "MapDrawer.h"

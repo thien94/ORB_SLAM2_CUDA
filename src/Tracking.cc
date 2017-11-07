@@ -18,6 +18,7 @@
 * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <unistd.h>
 
 #include "Tracking.h"
 
@@ -1518,12 +1519,17 @@ bool Tracking::Relocalization()
 
 void Tracking::Reset()
 {
-    mpViewer->RequestStop();
+    if (mpViewer != NULL)
+    {
+        mpViewer->RequestStop();
+    }
 
     cout << "System Reseting" << endl;
-    while(!mpViewer->isStopped())
-        usleep(3000);
-
+    if (mpViewer != NULL)
+    {
+        while(!mpViewer->isStopped())
+            usleep(3000);
+    }
     // Reset Local Mapping
     cout << "Reseting Local Mapper...";
     mpLocalMapper->RequestReset();
@@ -1557,7 +1563,10 @@ void Tracking::Reset()
     mlFrameTimes.clear();
     mlbLost.clear();
 
-    mpViewer->Release();
+    if (mpViewer != NULL)
+    {
+        mpViewer->Release();
+    }
 }
 
 void Tracking::InformOnlyTracking(const bool &flag)

@@ -11,6 +11,7 @@ Thirdparty/g2o/config.h
 Vocabulary/ORBvoc.txt
 KeyFrameTrajectory.txt
 CameraTrajectory.txt
+.vscode/
 
 # Compiled Object files
 *.slo

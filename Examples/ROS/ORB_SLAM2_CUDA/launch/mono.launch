@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="vocabularty_path" default="$(find ORB_SLAM2_CUDA)/../../../Vocabulary/ORBvoc.txt" />
+    <arg name="camera_setting_path" default="$(find ORB_SLAM2_CUDA)/conf/IDScam.yaml" />
+    <arg name="bUseViewer" default="false" />
+
+    <node name="ORB_SLAM2_CUDA" pkg="ORB_SLAM2_CUDA" type="ros_mono" output="screen" 
+    	args="$(arg vocabularty_path) $(arg camera_setting_path) $(arg bUseViewer)">
+  	</node>
+
+    <!-- run ueye camera usb -->
+    <include file="$(find ueye_cam)/launch/rgb8.launch"/>
+
+</launch>

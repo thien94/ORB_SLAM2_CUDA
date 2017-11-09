@@ -48,7 +48,12 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "Mono");
     ros::start();
 
-    if(argc != 4)
+    if(argc == 3)
+    {
+        ROS_WARN_STREAM("bUseViewer not set, use default value");
+        bUseViewer = false;
+    }
+    else if(argc != 4)
     {
         cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings bUseViewer" << endl;        
         ros::shutdown();
@@ -74,7 +79,7 @@ int main(int argc, char **argv)
     SLAM.Shutdown();
 
     // Save camera trajectory
-    SLAM.SaveKeyFrameTrajectoryTUM("Mono_KeyFrameTrajectory.txt");
+    SLAM.SaveKeyFrameTrajectoryTUM("/home/ubuntu/ORB_SLAM2_CUDA/test_results/Mono_KeyFrameTrajectory.txt");
 
     ros::shutdown();
 

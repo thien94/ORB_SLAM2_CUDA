@@ -5,7 +5,7 @@
     <arg name="camera_setting_path" default="$(find ORB_SLAM2_CUDA)/conf/IDScam.yaml" />
     <arg name="bUseViewer" default="false" />
 
-    <node name="ORB_SLAM2_CUDA" pkg="ORB_SLAM2_CUDA" type="ros_mono" output="screen" 
+    <node name="ORB_SLAM2_CUDA" pkg="ORB_SLAM2_CUDA" type="Mono" output="screen" 
     	args="$(arg vocabularty_path) $(arg camera_setting_path) $(arg bUseViewer)">
   	</node>
 

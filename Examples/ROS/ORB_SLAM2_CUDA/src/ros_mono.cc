@@ -105,10 +105,28 @@ int main(int argc, char **argv)
     return 0;
 }
 
+void CalculateAndOutputProcessingFrequency(std::chrono::steady_clock::time_point t1, std::chrono::steady_clock::time_point t2, std::chrono::steady_clock::time_point t3)
+{
+    static long spinCnt = 0;
+    static double t_temp = 0;
+    double time_read= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+    double time_track= std::chrono::duration_cast<std::chrono::duration<double> >(t3 - t2).count();
+    double time_total= std::chrono::duration_cast<std::chrono::duration<double> >(t3 - t1).count();
+    
+    cout << "Image reading time = " << setw(10) << time_read  << "s" << endl;
+    cout << "Tracking time =      " << setw(10) << time_track << "s, frequency = " << 1/time_track << "Hz" << endl; 
+    cout << "ALL cost time =      " << setw(10) << time_total << "s, frequency = " << 1/time_total << "Hz" << endl; 
+    t_temp = (time_total + t_temp*spinCnt)/(1+spinCnt);
+    cout << "Avg. time =          " << setw(10) << t_temp     << "s, frequency = " << 1/t_temp     << "Hz" << endl;
+    cout << "\n\n" << endl;
+    spinCnt++;
+}
+
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
-    
-    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    // Time point 1: Begin processing 1 frame
+    std::chrono::steady_clock::time_point tp1 = std::chrono::steady_clock::now();
+
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptr;
     try
@@ -121,10 +139,20 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         return;
     }
 
-    // mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
+    // Time point 2: Finish processing 1 frame
+    std::chrono::steady_clock::time_point tp2 = std::chrono::steady_clock::now();
 
-    // tf publisher
+    /**********************************************
+      tf publisher
+    **********************************************/
+    // mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
     cv::Mat Tcw = mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
+
+    // Time point 3: Finish SLAM process for this frame
+    std::chrono::steady_clock::time_point tp3 = std::chrono::steady_clock::now();
+
+    CalculateAndOutputProcessingFrequency(tp1, tp2, tp3);
+
     if (Tcw.empty()) {
       return;
     }
@@ -145,13 +173,16 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 
     br.sendTransform(tf::StampedTransform(transform, ros::Time(cv_ptr->header.stamp.toSec()), "world", "ORB_SLAM2"));
 
-    // pose publisher
+
+    /**********************************************
+      pose publisher
+    **********************************************/
+
     geometry_msgs::PoseStamped pose;
     pose.header.stamp = cv_ptr->header.stamp;
     pose.header.frame_id ="world";
     tf::poseTFToMsg(transform, pose.pose);
     pose_pub.publish(pose);
-
     geometry_msgs::PoseWithCovarianceStamped pose_inc_cov;
     pose_inc_cov.header.stamp = cv_ptr->header.stamp;
     pose_inc_cov.header.frame_id = "keyframe_" + to_string(frame_num++);
@@ -166,6 +197,8 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
     pose_inc_pub.publish(pose_inc_cov);
 
     last_transform = transform;
+
+
 
 }
 

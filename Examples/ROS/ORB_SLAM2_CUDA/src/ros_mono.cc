@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
-    PerformTFTransformAndPublish();
+    PerformTFTransformAndPublish(&nodeHandler);
 
     ros::spin();
 
@@ -119,7 +119,7 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 
     SaveTimePoint(TIME_FINISH_SLAM_PROCESS, std::chrono::steady_clock::now());
 
-    CalculateAndOutputProcessingFrequency();
+    CalculateAndPrintOutProcessingFrequency();
 
     if (Tcw.empty()) {
       return;

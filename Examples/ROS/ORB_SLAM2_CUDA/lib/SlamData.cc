@@ -1,14 +1,6 @@
-#include "SlamDataPub.h"
+#include "SlamData.h"
 
-//Eigen
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Geometry> 
-
-
-#include <opencv2/core/eigen.hpp>
-
-#include <mutex>
+using namespace std;
 
 ros::Publisher pose_pub;
 
@@ -16,27 +8,27 @@ ros::Publisher pose_inc_pub;
 
 std::chrono::steady_clock::time_point tp1, tp2, tp3;
 
-tf::Transform transform, last_transform;
+tf::Transform new_transform, last_transform;
 
-void SaveTimePoint(TimePointIndex index, , std::chrono::steady_clock::time_point time_point)
+void SaveTimePoint(TimePointIndex index, std::chrono::steady_clock::time_point time_point)
 {
-    switch (index):
+    switch (index)
     {
 	case TIME_BEGIN:
-    		tp1 = time_point;
+    	tp1 = time_point;
 		break;
 	case TIME_FINISH_CV_PROCESS:
-    		tp2 = time_point;
+    	tp2 = time_point;
 		break;
 	case TIME_FINISH_SLAM_PROCESS:
-    		tp3 = time_point;
+    	tp3 = time_point;
         break;
     default: 
         break;
     }
 }
 
-void CalculateAndShowProcessingFrequency(void)
+void CalculateAndPrintOutProcessingFrequency(void)
 {
     static long spinCnt = 0;
     static double t_temp = 0;
@@ -64,13 +56,13 @@ void PublishTFForROS(cv::Mat Tcw, cv_bridge::CvImageConstPtr cv_ptr)
 
     static tf::TransformBroadcaster br;
 
-    transform.setOrigin(tf::Vector3(twc.at<float>(0, 0) * MAP_SCALE, twc.at<float>(0, 1) * MAP_SCALE, twc.at<float>(0, 2) * MAP_SCALE));
+    new_transform.setOrigin(tf::Vector3(twc.at<float>(0, 0) * MAP_SCALE, twc.at<float>(0, 1) * MAP_SCALE, twc.at<float>(0, 2) * MAP_SCALE));
 
     tf::Quaternion tf_quaternion(q[0], q[1], q[2], q[3]);
 
-    transform.setRotation(tf_quaternion);
+    new_transform.setRotation(tf_quaternion);
 
-    br.sendTransform(tf::StampedTransform(transform, ros::Time(cv_ptr->header.stamp.toSec()), "world", "ORB_SLAM2"));
+    br.sendTransform(tf::StampedTransform(new_transform, ros::Time(cv_ptr->header.stamp.toSec()), "world", "ORB_SLAM2"));
 }
 
 
@@ -81,12 +73,12 @@ void PublishPoseForROS(cv_bridge::CvImageConstPtr cv_ptr)
     geometry_msgs::PoseStamped pose;
     pose.header.stamp = cv_ptr->header.stamp;
     pose.header.frame_id ="world";
-    tf::poseTFToMsg(transform, pose.pose);
+    tf::poseTFToMsg(new_transform, pose.pose);
     pose_pub.publish(pose);
     geometry_msgs::PoseWithCovarianceStamped pose_inc_cov;
     pose_inc_cov.header.stamp = cv_ptr->header.stamp;
     pose_inc_cov.header.frame_id = "keyframe_" + to_string(frame_num++);
-    tf::poseTFToMsg(last_transform.inverse()*transform, pose_inc_cov.pose.pose);
+    tf::poseTFToMsg(last_transform.inverse()*new_transform, pose_inc_cov.pose.pose);
     pose_inc_cov.pose.covariance[0*7] = 0.0005;
     pose_inc_cov.pose.covariance[1*7] = 0.0005;
     pose_inc_cov.pose.covariance[2*7] = 0.0005;
@@ -96,17 +88,17 @@ void PublishPoseForROS(cv_bridge::CvImageConstPtr cv_ptr)
 
     pose_inc_pub.publish(pose_inc_cov);
 
-    last_transform = transform;
+    last_transform = new_transform;
 
 }
 
-void PerformTFTransformAndPublish(void)
+void PerformTFTransformAndPublish(ros::NodeHandle *nodeHandler)
 {
     // Perform tf transform and publish
     last_transform.setOrigin(tf::Vector3(0,0,0));
     tf::Quaternion q(0,0,0,1);
     last_transform.setRotation(q);
 
-    pose_pub = nodeHandler.advertise<geometry_msgs::PoseStamped>("posestamped", 1000);
-    pose_inc_pub = nodeHandler.advertise<geometry_msgs::PoseWithCovarianceStamped>("incremental_pose_cov", 1000);
+    pose_pub = (*nodeHandler).advertise<geometry_msgs::PoseStamped>("posestamped", 1000);
+    pose_inc_pub = (*nodeHandler).advertise<geometry_msgs::PoseWithCovarianceStamped>("incremental_pose_cov", 1000);
 }

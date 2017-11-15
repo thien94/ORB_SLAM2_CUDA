@@ -113,6 +113,14 @@ public:
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
 
+    // Get all map points dataand reference map points from mpMap thread
+    // Added by HT94 to display data on RVIZ ROS
+    const vector<MapPoint*> GetmpMapAllMapPoints(void);
+    const vector<MapPoint*> GetmpMapReferenceMapPoints(void);
+
+    // Get pointer to FrameDrawer thread
+    FrameDrawer* GetpFrameDrawer(void);
+
 private:
 
     // Input sensor

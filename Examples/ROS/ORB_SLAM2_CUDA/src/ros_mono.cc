@@ -43,11 +43,17 @@ using namespace std;
 class ImageGrabber
 {
 public:
-    ImageGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
+    ImageGrabber(ORB_SLAM2::System* pSLAM, ORB_SLAM2::SlamData* pSLAMDATA)
+    {
+        mpSLAM = pSLAM;
+        mpSLAMDATA = pSLAMDATA;
+    }
 
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
 
     ORB_SLAM2::System* mpSLAM;
+
+    ORB_SLAM2::SlamData* mpSLAMDATA;
 };
 
 int main(int argc, char **argv)
@@ -56,41 +62,48 @@ int main(int argc, char **argv)
 
     ros::start();
 
-    bool bUseViewer;
+    bool bUseViewer, bEnablePublishROSTopic;
 
     if(argc == 3)
     {
-        ROS_WARN_STREAM("bUseViewer not set, use default value, Viewer is disabled");
+        ROS_WARN_STREAM("bUseViewer not set, use default value: Disable Viewer");
+        ROS_WARN_STREAM("bEnablePublishROSTopic not set, use default value: Publishing ROS topics");
         bUseViewer = false;
+        bEnablePublishROSTopic = true;
     }
-    else if(argc != 4)
+    else if(argc == 4)
     {
-        cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings bUseViewer" << endl;        
+        ROS_WARN_STREAM("bEnablePublishROSTopic not set, use default value: Publishing ROS topics");
+        bEnablePublishROSTopic = true;
+    }
+    else if((argc < 3) || (argc > 5))
+    {
+        cerr << endl << "Usage: rosrun ORB_SLAM2 Mono path_to_vocabulary path_to_settings bUseViewer bEnablePublishROSTopic" << endl;        
         ros::shutdown();
         return 1;
     }    
     
-    stringstream ss(argv[3]);
-    ss >> boolalpha >> bUseViewer;
+    stringstream ss1(argv[3]), ss2(argv[4]);
+    ss1 >> boolalpha >> bUseViewer;
+    ss2 >> boolalpha >> bEnablePublishROSTopic;
     
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    // ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR, bUseViewer);
-    
-    ImageGrabber igb(&SLAM);
 
     ros::NodeHandle nodeHandler;
 
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
+    ORB_SLAM2::SlamData SLAMDATA(&SLAM, &nodeHandler, bEnablePublishROSTopic);
 
-    PerformTFTransformAndPublish(&nodeHandler);
+    ImageGrabber igb(&SLAM, &SLAMDATA);  
+    
+    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
     ros::spin();
 
     // Stop all threads
     SLAM.Shutdown();
 
-    SLAM.SaveKeyFrameTrajectoryTUM("/home/ubuntu/ORB_SLAM2_CUDA/test_results/Mono_KeyFrameTrajectory.txt");
+    SLAM.SaveKeyFrameTrajectoryTUM(KEYFRAME_TRAJECTORY_TUM_SAVE_FILE_DIR);
 
     ros::shutdown();
 
@@ -99,7 +112,8 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
-    SaveTimePoint(TIME_BEGIN, std::chrono::steady_clock::now());
+    // Saves 3 points of time to calculate fps: begin, finish cv process and finish SLAM process
+    mpSLAMDATA->SaveTimePoint(ORB_SLAM2::SlamData::TimePointIndex::TIME_BEGIN);
    
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptr;
@@ -113,21 +127,29 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         return;
     }
 
-    SaveTimePoint(TIME_FINISH_CV_PROCESS, std::chrono::steady_clock::now());
+    mpSLAMDATA->SaveTimePoint(ORB_SLAM2::SlamData::TimePointIndex::TIME_FINISH_CV_PROCESS);
 
     cv::Mat Tcw = mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
 
-    SaveTimePoint(TIME_FINISH_SLAM_PROCESS, std::chrono::steady_clock::now());
+    mpSLAMDATA->SaveTimePoint(ORB_SLAM2::SlamData::TimePointIndex::TIME_FINISH_SLAM_PROCESS);
 
-    CalculateAndPrintOutProcessingFrequency();
+    mpSLAMDATA->CalculateAndPrintOutProcessingFrequency();
 
     if (Tcw.empty()) {
       return;
     }
 
-    PublishTFForROS(Tcw, cv_ptr);
+    if (mpSLAMDATA->EnablePublishROSTopics())
+    {
 
-    PublishPoseForROS(cv_ptr);
+        mpSLAMDATA->PublishTFForROS(Tcw, cv_ptr);
+
+        mpSLAMDATA->PublishPoseForROS(cv_ptr);
+
+        mpSLAMDATA->PublishPointCloudForROS();
+
+        mpSLAMDATA->PublishCurrentFrameForROS();
+    }
 }
 
 

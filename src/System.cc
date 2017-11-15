@@ -446,4 +446,18 @@ void System::SaveTrajectoryKITTI(const string &filename)
     cout << endl << "trajectory saved!" << endl;
 }
 
+const vector<MapPoint*> System::GetmpMapAllMapPoints(void)
+{ 
+    return mpMap->GetAllMapPoints();
+}
+const vector<MapPoint*> System::GetmpMapReferenceMapPoints(void)
+{
+    return mpMap->GetReferenceMapPoints();
+}
+
+FrameDrawer* System::GetpFrameDrawer(void)
+{
+    return mpFrameDrawer;
+}
+
 } //namespace ORB_SLAM

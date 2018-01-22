@@ -6,7 +6,7 @@ Based on ORB-SLAM2 with GPU enhancements by yunchih's [ORB-SLAM2-GPU2016-final](
 
 - [Performance comparison between ORB-SLAM2 and ORB-SLAM2 with GPU enhancement running on TX1](https://www.youtube.com/watch?v=3597nnW2JCg&list=PLde9NsDtSVwZNb_pPyKm5eOPk86x_9Yk1&index=1)
 - [Full playlist videos](https://www.youtube.com/playlist?list=PLde9NsDtSVwZNb_pPyKm5eOPk86x_9Yk1)
-- [ORB-SLAM2 with GPU enhancements running on NVIDIA Jetson TX2 by Mr. Dan Pollock](https://www.youtube.com/watch?v=yBH9man45z0&feature=youtu.be)
+- [ORB-SLAM2 with GPU enhancements running on NVIDIA Jetson TX2 by Dan Pollock](https://www.youtube.com/watch?v=yBH9man45z0&feature=youtu.be)
 
 I struggled with a number of issues to get the work of yunchih up and running on TX1, so hopefully this can help anyone doing the same thing. The original works offers ROS node to process live data, but it doesn't broadcast any message. So I added a ROS publisher for a few topics.
 
@@ -24,8 +24,8 @@ This is still a work in progress so expects things to change.
 * current frame
 
 ## Prerequisite
-* I started with a fresh flash for TX1 with [latest JetPack](http://www.jetsonhacks.com/2017/03/21/jetpack-3-0-nvidia-jetson-tx2-development-kit/) and OpenCV4tegra not installed.
-* I recommend to run TX1 from a SD card, at least 64GB, because the build (especially OpenCV) consumes a lot of memory. You can follow JetsonHacks' post [here](http://www.jetsonhacks.com/2017/01/26/run-jetson-tx1-sd-card/)
+* I started with a fresh flash for TX1 with [JetPack 3.0](http://www.jetsonhacks.com/2017/03/21/jetpack-3-0-nvidia-jetson-tx2-development-kit/) and OpenCV4Tegra **not installed**.
+* I recommend to run TX1 from a SD card, at least 64GB, because the build (especially OpenCV) consumes a lot of memory. You can follow JetsonHacks' post [here](http://www.jetsonhacks.com/2017/01/26/run-jetson-tx1-sd-card/).
 
 ## Installation
 ### Build GPU enabled OpenCV3 ROS Kinetic
@@ -34,7 +34,7 @@ First, check to get the CUDA compiler version:
 ```
 nvcc --version 
 ```
-If you get error ```nvcc: command not found ```, check [this page](https://devtalk.nvidia.com/default/topic/995277/cuda-8-0-toolkit-install-nvcc-not-found-ubuntu-16-04/) to solve this problem first before moving on.
+If you get error ```nvcc: command not found ```, check [this page](https://devtalk.nvidia.com/default/topic/995277/cuda-8-0-toolkit-install-nvcc-not-found-ubuntu-16-04/) to solve it first before moving on.
 Clone the OpenCV repo locally and checkout to version v3.2.0:
 ```
 sudo apt-get install git
@@ -123,7 +123,7 @@ cmake \
     -DOPENCV_TEST_DATA_PATH=../opencv_extra/testdata \
     ../opencv
 ```
-Check the link to find the correct ```cmake``` command for your platform, ther are 3 sets of them. In case of **NVIDIA Jetson TX1**:
+Check the [link](https://docs.opencv.org/3.2.0/d6/d15/tutorial_building_tegra_cuda.html) to find the correct ```cmake``` command for your platform (there are 3 sets of them). In the case of **NVIDIA Jetson TX1**:
 ```
 make -j4
 sudo make instal
@@ -151,14 +151,14 @@ cd ORB_SLAM2_CUDA
 chmod +x build.sh
 ./build.sh
 ```
-Remember to run ```build.sh``` before building ROS because the **libORB_SLAM2.so** at lib folder needs to be created first.
+Remember to run ```build.sh``` before building ROS because the **lib/libORB_SLAM2_CUDA.so** needs to be created first.
 To build ROS node:
 ```
 export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/path/to/ORB_SLAM2_CUDA/Examples/ROS
 chmod +x build_ros.sh
 ./build_ros.sh
 ```
-Sometimes it helps to remove all the previous builds folder and start the build from scratch:
+Done. If you have problem with the build, sometimes it helps to remove previous build folders:
 ```
 # in ORB_SLAM2_CUDA folder
 sudo rm -rf build
@@ -171,31 +171,35 @@ sudo rm -rf Examples/ROS/ORB_SLAM2_CUDA/build
 When the build is completed, you can try the examples as in the ORB-SLAM2 repo's instructions.
 
 ## Run ROS launch file for Monocular node
-This one is created by me. **You need to have PCL library to run this**. 
+This one is created by me. **Requires PCL library to run**. 
 
 First you need to have the camera's image published on topic ```camera/image_raw```. 
 
 Change the vocabulary and camera settings file accordingly. The directory is set in the launch file, located at ```ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch```
 
 Then launch:
+
 ```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch```
 
 This will run the ROS publisher node. The ROS topics will now be published in the ROS network. Run ```RVIZ``` for visualization:
+
 ```rosrun rviz rviz```
+
 Note that Viewer is disable by default.
 
-Full usage:
-```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch [bUseViewer (false by default)] [bEnablePublishROSTopic (true by default)]```
+## Full usage:
 
-For example: 
-* To launch this node with Viewer enabled, run:
+```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch [bUseViewer:=(false by default)] [bEnablePublishROSTopic:=(true by default)]```
+
+Example: 
+* To launch this node with Viewer enabled:
 ```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch bUseViewer:=true```
 * To launch this node without publishing any ROS topics:
 ```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch bEnablePublishROSTopic:=false```
 
 ### This is a work in progress. So expects new things and bugs fixes in future version. Happy coding.
 
-## Reference and Useful links for troubleshooting
+## References and Useful links for troubleshooting
 https://devtalk.nvidia.com/default/topic/1001801/orb_slam2-cuda-enhanced-running-on-a-tx2/#
 https://github.com/raulmur/ORB_SLAM2/issues/202
 https://github.com/raulmur/ORB_SLAM2/issues/205

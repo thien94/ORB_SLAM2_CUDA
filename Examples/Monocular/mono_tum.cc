@@ -36,11 +36,14 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
 
 int main(int argc, char **argv)
 {
-    if(argc != 4)
+    bool bUseViewer;
+    if (argc != 5)
     {
-        cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence" << endl;
+        cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence bUseViewer" << endl;
         return 1;
     }
+    stringstream ss1(argv[4]);
+    ss1 >> boolalpha >> bUseViewer;
 
     // Retrieve paths to images
     vector<string> vstrImageFilenames;
@@ -51,7 +54,7 @@ int main(int argc, char **argv)
     int nImages = vstrImageFilenames.size();
 
     // Create SLAM system with UI Disable
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,false);
+    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,bUseViewer);
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     //ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
 

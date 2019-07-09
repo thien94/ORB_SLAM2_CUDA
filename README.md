@@ -170,6 +170,17 @@ sudo rm -rf Examples/ROS/ORB_SLAM2_CUDA/build
 ```
 When the build is completed, you can try the examples as in the ORB-SLAM2 repo's instructions.
 
+## Run non-ROS examples in Monocular node
+Please refer to [ORB-SLAM2 repo](https://github.com/raulmur/ORB_SLAM2#4-monocular-examples) for a detailed step-by-step instruction, with two modifications:
+- The executable is located in the `build` folder instead of `Examples/Monocular`.
+- For `TUM` and `KITTI` examples, add a fourth argument at the end of the command, which corresponds to `bUseViewer` that enables / disables Viewer to pop up.
+
+Example run:
+```
+$ cd /path/to/ORB_SLAM2_CUDA
+$ ./build/mono_tum Vocabulary/ORBvoc.txt Examples/Monocular/TUM1.yaml Data/rgbd_dataset_freiburg1_desk true
+```
+
 ## Run ROS launch file for Monocular node
 This one is created by me. **Requires PCL library to run**. 
 

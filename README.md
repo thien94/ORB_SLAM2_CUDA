@@ -1,6 +1,6 @@
 # ORB_SLAM2_CUDA
-ORB-SLAM2 with GPU enhancement modified and added ROS topic publisher for **NVIDIA Jetson TX1**. 
-Tested with Monocular camera in real time.
+Modified version of ORB-SLAM2 with GPU enhancement and several ROS topics for **NVIDIA Jetson TX1, TX2, Xavier, Nano**. 
+Currently only supports Monocular camera. Run in real time.
 
 Based on ORB-SLAM2 with GPU enhancements by yunchih's [ORB-SLAM2-GPU2016-final](https://github.com/yunchih/ORB-SLAM2-GPU2016-final), which is based on Raul Mur-Artal's [ORB-SLAM2](https://github.com/raulmur/ORB_SLAM2).
 
@@ -8,9 +8,7 @@ Based on ORB-SLAM2 with GPU enhancements by yunchih's [ORB-SLAM2-GPU2016-final](
 - [Full playlist videos](https://www.youtube.com/playlist?list=PLde9NsDtSVwZNb_pPyKm5eOPk86x_9Yk1)
 - [ORB-SLAM2 with GPU enhancements running on NVIDIA Jetson TX2 by Dan Pollock](https://www.youtube.com/watch?v=yBH9man45z0&feature=youtu.be)
 
-I struggled with a number of issues to get the work of yunchih up and running on TX1, so hopefully this can help anyone doing the same thing. The original works offers ROS node to process live data, but it doesn't broadcast any message. So I added a ROS publisher for a few topics.
-
-This is still a work in progress so expects things to change.
+I struggled with a number of issues to get the work of yunchih up and running on TX1, so hopefully this can help anyone doing the same thing. The original works offers ROS node to process live data, but it doesn't broadcast any message. So I added ROS publishers for a few topics.
 
 ## Implementation
 - [x] Monocular
@@ -23,13 +21,20 @@ This is still a work in progress so expects things to change.
 * pointcloud
 * current frame
 
+## Tested on:
+* Jetson TX1, TX2
+* Jetson Xavier
+* Jetson Nano
+
+# Installation on Jetson TX1, TX2, Xavier
 ## Prerequisite
-* I started with a fresh flash for TX1 with [JetPack 3.0](http://www.jetsonhacks.com/2017/03/21/jetpack-3-0-nvidia-jetson-tx2-development-kit/) and OpenCV4Tegra **not installed**.
-* I recommend to run TX1 from a SD card, at least 64GB, because the build (especially OpenCV) consumes a lot of memory. You can follow JetsonHacks' post [here](http://www.jetsonhacks.com/2017/01/26/run-jetson-tx1-sd-card/).
+* It might be better to start with a fresh flash for with OpenCV4Tegra **not installed**.
+* I recommend running from a SD card, at least 64GB, because the build (especially OpenCV) consumes a lot of memory. You can follow JetsonHacks' post [here](http://www.jetsonhacks.com/2017/01/26/run-jetson-tx1-sd-card/) to run the system on SD card.
 
 ## Installation
 ### Build GPU enabled OpenCV3 ROS Kinetic
 I followed this [page](https://qiita.com/kendemu/items/a805b0b9828b6f6031db) to make the ROS replacement part. If you follow the commands on that page remember to do the patches afterwards. But if we use opencv 3.2 we don't need to do the patches, which is what I do below. 
+
 First, check to get the CUDA compiler version:
 ```
 nvcc --version 
@@ -128,22 +133,27 @@ Check the [link](https://docs.opencv.org/3.2.0/d6/d15/tutorial_building_tegra_cu
 make -j4
 sudo make instal
 ```
+
 ### Install dependancies for ORB-SLAM2
 #### Pangolin
 Dowload and install instructions can be found at: https://github.com/stevenlovegrove/Pangolin.
+
 #### BLAS and LAPACK
 ```
 sudo apt-get install libblas-dev
 sudo apt-get install liblapack-dev
 ```
+
 #### Eigen3
 Download and install instructions can be found at: http://eigen.tuxfamily.org. Required at least 3.1.0.
+
 #### PCL for ROS
 ```
 sudo apt-get install libopenni2-dev
 sudo apt-get install python-vtk
 ```
-### Building ORB_SLAM2_CUDA
+
+# Building ORB_SLAM2_CUDA
 Clone the repo and execute the build script for normal ORB-SLAM2:
 ```
 git clone https://github.com/hoangthien94/ORB_SLAM2_CUDA.git ORB_SLAM2_CUDA
@@ -170,6 +180,41 @@ sudo rm -rf Examples/ROS/ORB_SLAM2_CUDA/build
 ```
 When the build is completed, you can try the examples as in the ORB-SLAM2 repo's instructions.
 
+# Installation on Jetson Nano
+- Follow the official [getting started](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit#intro) to have a working Nano with latest image.
+- Install OpenCV **4.1.0** on Jetson Nano (the `3.3.0` version installed with the [default image](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit#write) has some issues). Following the instructions in [this page](https://pysource.com/2019/08/26/install-opencv-4-1-on-nvidia-jetson-nano/) worked well for me.
+- Install dependencies:
+  - Pangolin: follow the instructions [here](https://github.com/stevenlovegrove/Pangolin).
+  - Eigen 3: 
+     ```
+     sudo apt install libeigen3-dev
+     ```
+  - PCL for ROS:
+    ```
+    sudo apt-get install libopenni2-dev
+    sudo apt-get install ros-melodic-pcl-ros
+    ```
+- Clone the `jetson_nano` branch of the code (with modified `CMakeLists` for OpenCV 4.1.0 and fixed [some compatability issues](https://github.com/raulmur/ORB_SLAM2/issues/451)):
+```
+git clone https://github.com/hoangthien94/ORB_SLAM2_CUDA.git ORB_SLAM2_CUDA
+cd ORB_SLAM2_CUDA 
+git checkout jetson_nano
+```
+- Build like normal:
+```
+chmod +x build.sh
+./build.sh
+```
+
+- Additionally, to run ROS on Jetson Nano, first follow this [JetsonHacks' blog post](https://www.jetsonhacks.com/2019/10/23/install-ros-on-jetson-nano/) to install ROS on Nano. Then build this repo with:
+
+```
+cd /path/to/ORB_SLAM2_CUDA/
+export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:/path/to/ORB_SLAM2_CUDA/Examples/ROS
+chmod +x build_ros.sh
+./build_ros.sh
+```
+
 ## Run non-ROS examples in Monocular node
 Please refer to [ORB-SLAM2 repo](https://github.com/raulmur/ORB_SLAM2#4-monocular-examples) for a detailed step-by-step instruction, with two modifications:
 - The executable is located in the `build` folder instead of `Examples/Monocular`.
@@ -190,23 +235,33 @@ Change the vocabulary and camera settings file accordingly. The directory is set
 
 Then launch:
 
-```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch```
+```
+roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch
+```
 
 This will run the ROS publisher node. The ROS topics will now be published in the ROS network. Run ```RVIZ``` for visualization:
 
-```rosrun rviz rviz```
+```
+rosrun rviz rviz
+```
 
 Note that Viewer is disable by default.
 
 ## Full usage:
 
-```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch [bUseViewer:=(false by default)] [bEnablePublishROSTopic:=(true by default)]```
+```
+roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch [bUseViewer:=(false by default)] [bEnablePublishROSTopic:=(true by default)]
+```
 
 Example: 
 * To launch this node with Viewer enabled:
-```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch bUseViewer:=true```
+```
+roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch bUseViewer:=true
+```
 * To launch this node without publishing any ROS topics:
-```roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch bEnablePublishROSTopic:=false```
+```
+roslaunch /path/to/ORB_SLAM2_CUDA/Examples/ROS/ORB_SLAM2_CUDA/launch/ros_mono.launch bEnablePublishROSTopic:=false
+```
 
 ### This is a work in progress. So expects new things and bugs fixes in future version. Happy coding.
 

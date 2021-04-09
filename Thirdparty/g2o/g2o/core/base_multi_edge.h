@@ -66,12 +66,12 @@ namespace g2o {
       typedef MatrixXd::MapType JacobianType;
       typedef typename BaseEdge<D,E>::ErrorVector ErrorVector;
       typedef typename BaseEdge<D,E>::InformationType InformationType;
-      typedef Eigen::Map<MatrixXd, MatrixXd::Flags & AlignedBit ? Aligned : Unaligned > HessianBlockType;
+      typedef Eigen::Map<MatrixXd, MatrixXd::Flags & PacketAccessBit ? Aligned : Unaligned > HessianBlockType;
 
       BaseMultiEdge() : BaseEdge<D,E>()
       {
       }
-      
+
       virtual void linearizeOplus(JacobianWorkspace& jacobianWorkspace);
 
       /**
@@ -79,7 +79,7 @@ namespace g2o {
        * the result in temporary variable vector _jacobianOplus
        */
       virtual void linearizeOplus();
-      
+
       virtual void resize(size_t size);
 
       virtual bool allVerticesFixed() const;

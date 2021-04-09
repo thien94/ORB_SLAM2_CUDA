@@ -53,13 +53,13 @@ namespace g2o {
   class BaseVertex : public OptimizableGraph::Vertex {
     public:
     typedef T EstimateType;
-    typedef std::stack<EstimateType, 
+    typedef std::stack<EstimateType,
                        std::vector<EstimateType,  Eigen::aligned_allocator<EstimateType> > >
     BackupStackType;
 
     static const int Dimension = D;           ///< dimension of the estimate (minimal) in the manifold space
 
-    typedef Eigen::Map<Matrix<double, D, D>, Matrix<double,D,D>::Flags & AlignedBit ? Aligned : Unaligned >  HessianBlockType;
+    typedef Eigen::Map<Matrix<double, D, D>, Matrix<double,D,D>::Flags & PacketAccessBit ? Aligned : Unaligned >  HessianBlockType;
 
   public:
     BaseVertex();
@@ -73,7 +73,7 @@ namespace g2o {
 
     virtual int copyB(double* b_) const {
       memcpy(b_, _b.data(), Dimension * sizeof(double));
-      return Dimension; 
+      return Dimension;
     }
 
     virtual const double& b(int i) const { assert(i < D); return _b(i);}

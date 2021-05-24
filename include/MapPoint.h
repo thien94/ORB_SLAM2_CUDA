@@ -144,6 +144,16 @@ protected:
 
      std::mutex mMutexPos;
      std::mutex mMutexFeatures;
+
+     // map serialization addition
+    public:
+        // for serialization
+        MapPoint();
+    private:
+        // serialize is recommended to be private
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive &ar, const unsigned int version);
 };
 
 } //namespace ORB_SLAM

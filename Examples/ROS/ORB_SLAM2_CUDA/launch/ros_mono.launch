@@ -2,7 +2,7 @@
 <launch>
 
     <arg name="vocabularty_path" default="$(find ORB_SLAM2_CUDA)/../../../Vocabulary/ORBvoc.txt" />
-    <arg name="camera_setting_path" default="$(find ORB_SLAM2_CUDA)/conf/g5.yaml" />
+    <arg name="camera_setting_path" default="$(find ORB_SLAM2_CUDA)/conf/IDScam.yaml" />
     <arg name="bUseViewer" default="true" />
     <arg name="bEnablePublishROSTopic" default="true" />
 

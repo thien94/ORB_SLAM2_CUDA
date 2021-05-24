@@ -25,6 +25,8 @@
 #include <string>
 #include <thread>
 #include <opencv2/core/core.hpp>
+#include <sys/resource.h>
+
 
 /* Add this line to fix problem "Eigen deprecated"*/
 #include <unistd.h>
@@ -110,8 +112,9 @@ public:
     void SaveTrajectoryKITTI(const string &filename);
 
     // TODO: Save/Load functions
-    // SaveMap(const string &filename);
-    // LoadMap(const string &filename);
+    void SaveMap(const std::string &filename);
+    bool LoadMap(const string &filename);
+
 
     // Get all map points dataand reference map points from mpMap thread
     // Added by HT94 to display data on RVIZ ROS
@@ -122,6 +125,9 @@ public:
     FrameDrawer* GetpFrameDrawer(void);
 
 private:
+
+    rlim_t GetCurrentCallStackSize ();
+    bool SetCallStackSize (const rlim_t kNewStackSize);
 
     // Input sensor
     eSensor mSensor;
